@@ -8,13 +8,67 @@ from datetime import datetime, date
 import pickle
 
 from colorama import init, Fore, Style
+from rich.console import Console
+from rich.table import Table
+from functools import wraps
 
+
+COLORS = ["cyan", "magenta", "green", "yellow", "blue", "bright_red", "white"]
 init(autoreset=True)
 ERROR = Fore.RED
 FIELD = Fore.MAGENTA
 RESET_ALL = Style.RESET_ALL
 
 DATE_FORMAT = "%d.%m.%Y"
+
+
+def as_table(title="Table"):
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            result = func(*args, **kwargs)
+
+            # Проверка: если это не список или пустой список — вернём как есть
+            if not isinstance(result, list) or not result:
+                return result
+
+            # Берём первое значение для определения полей
+            first = result[0]
+            if hasattr(first, "__dict__"):
+                headers = list(first.__dict__.keys())
+            elif isinstance(first, dict):
+                headers = list(first.keys())
+            else:
+                return result  # не поддерживаемые типы
+
+            table = Table(title=title)
+            for i, h in enumerate(headers):
+                table.add_column(h.capitalize(), style=COLORS[i % len(COLORS)])
+
+            for item in result:
+                row = []
+                for h in headers:
+                    value = (
+                        getattr(item, h, None)
+                        if hasattr(item, "__dict__")
+                        else item.get(h, None)
+                    )
+                    if isinstance(value, list):
+                        value = ", ".join(str(v) for v in value)
+                    elif value is None:
+                        value = "---"
+                    else:
+                        value = str(value)
+                    row.append(value)
+                table.add_row(*row)
+
+            console = Console()
+            console.print(table)
+            return ""  # для предотвращения повторного вывода
+
+        return wrapper
+
+    return decorator
 
 
 class Field:
@@ -116,6 +170,7 @@ class AddressBook(UserDict):
             del self.data[name]
 
     def get_upcoming_birthdays(self):
+        days_count = 300
         result = []
         today = datetime.today().date()
         for record in self.data.values():
@@ -126,14 +181,14 @@ class AddressBook(UserDict):
                 birthday_next_year = date(today.year + 1, birthday.month, birthday.day)
                 delta = (birthday_this_year - today).days
                 delta_next = (birthday_next_year - today).days
-                if 0 <= delta <= 7:
+                if 0 <= delta <= days_count:
                     result.append(
                         {
                             "name": name,
                             "congratulation_date": birthday_this_year.strftime(DATE_FORMAT),
                         }
                     )
-                elif 0 <= delta_next <= 7:
+                elif 0 <= delta_next <= days_count:
                     result.append(
                         {
                             "name": name,
@@ -230,24 +285,37 @@ def show_birthday(args, book):
     return ERROR + "Birthday not found."
 
 
+@as_table(title="Upcoming Birthdays")
 @input_error
 def birthdays(book):
     """Повертає список контактів із днями народження на наступний тиждень."""
 
     upcoming = book.get_upcoming_birthdays()
     if upcoming:
-        return "Upcoming birthdays:\n" + "\n".join(
-            f"{item['name']}: {item['congratulation_date']}" for item in upcoming
-        )
+        return upcoming
+        # return "Upcoming birthdays:\n" + "\n".join(
+        #     f"{item['name']}: {item['congratulation_date']}" for item in upcoming
+        # )
     return "No upcoming birthdays."
 
 
+# def show_all(book):
+#     """Повертає всі контакти у книзі."""
+
+#     if not book:
+#         return "No contacts saved."
+#     return "\n".join(f"{record}" for record in book.data.values())
+
+
+@as_table(title="Address Book")
 def show_all(book):
-    """Повертає всі контакти у книзі."""
+    """Повертає всі контакти у книзі у вигляді таблиці."""
 
     if not book:
         return "No contacts saved."
-    return "\n".join(f"{record}" for record in book.data.values())
+    else:
+        return list(book.data.values())
+
 
 
 def save_data(book, filename="addressbook.pkl"):
