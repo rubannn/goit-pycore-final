@@ -80,13 +80,16 @@ class Field:
 
 
 class Name(Field):
-    pass
+    def __init__(self, name: str):
+        if len(name.strip()) < 2:
+            raise Exception(ERROR + "Name should contain at least 2 characters")
+        super().__init__(name)
 
 
 class Phone(Field):
     def __init__(self, value):
         if not re.fullmatch(r"\d{10}", value):
-            print(
+            raise Exception(
                 ERROR
                 + f'You input: {value}\nError: "Phone number format <only 10 digits>."'
             )
@@ -98,22 +101,26 @@ class Birthday(Field):
         try:
             self.value = datetime.strptime(value, DATE_FORMAT).date()
         except ValueError:
-            # raise ValueError("Invalid date format. Use DD.MM.YYYY")
-            print(ERROR + "Invalid date format. Use DD.MM.YYYY")
+            raise Exception(ERROR + "Invalid date format. Use DD.MM.YYYY")
 
     def __str__(self):
         return self.value.strftime(DATE_FORMAT) if self.value else "---"
+
+
 class Note:
     def __init__(self):
         self.title = None
         self.note = None
         self.tag = None
 
+
 class Record:
     def __init__(self, name):
         self.name = Name(name)
         self.phones = []
         self.birthday = None
+        self.email = None
+        self.address = None
 
     def add_phone(self, phone):
         """Додавання телефонів"""
@@ -129,7 +136,7 @@ class Record:
             if phone.value == old_phone:
                 phone.value = Phone(new_phone).value
                 return
-        print(
+        raise Exception(
             ERROR + f'You want to change: {old_phone}\nError: "Phone number not found."'
         )
 
@@ -144,11 +151,27 @@ class Record:
         """Додавання дня народження"""
         self.birthday = Birthday(birthday)
 
+    def add_address(self, address: str):
+        """Додавання адреси"""
+        if len(address.strip()) < 2:
+            raise Exception(ERROR + "Address should contain at least 2 characters")
+        
+        self.address = address
+        return "Address added."
+    
+    def add_email(self, email):
+        """Додавання email адреси"""
+       
+        self.email = email
+        return "Email added."
+    
     def __str__(self):
         title_name = FIELD + "Contact name:" + RESET_ALL
         title_phones = FIELD + "phones:" + RESET_ALL
         title_birthday = FIELD + "birthday:" + RESET_ALL
-        return f"{title_name} {self.name.value}, {title_phones} {'; '.join(p.value for p in self.phones)}, {title_birthday} {self.birthday if self.birthday else '---'}"
+        title_email = FIELD + "email:" + RESET_ALL
+        title_address = FIELD + "address:" + RESET_ALL
+        return f"{title_name} {self.name.value}, {title_phones} {'; '.join(p.value for p in self.phones)}, {title_birthday} {self.birthday if self.birthday else '---'}, {title_email} {self.email if self.email else '---'}, {title_address} {self.address if self.address else '---'}"
 
 
 class AddressBook(UserDict):
@@ -160,7 +183,7 @@ class AddressBook(UserDict):
         """Додавання записів"""
         self.data[note.tite] = note
 
-    def find(self, name):
+    def find(self, name) -> Record:
         """Пошук записів за іменем"""
         return self.data.get(name, None)
 
@@ -185,14 +208,18 @@ class AddressBook(UserDict):
                     result.append(
                         {
                             "name": name,
-                            "congratulation_date": birthday_this_year.strftime(DATE_FORMAT),
+                            "congratulation_date": birthday_this_year.strftime(
+                                DATE_FORMAT
+                            ),
                         }
                     )
                 elif 0 <= delta_next <= days_count:
                     result.append(
                         {
                             "name": name,
-                            "congratulation_date": birthday_next_year.strftime(DATE_FORMAT),
+                            "congratulation_date": birthday_next_year.strftime(
+                                DATE_FORMAT
+                            ),
                         }
                     )
         return result
@@ -207,12 +234,8 @@ def input_error(func):
     def inner(*args, **kwargs):
         try:
             return func(*args, **kwargs)
-        except ValueError:
-            return ERROR + f"\tGive me name and phone please. Format: <name> <phone>"
-        except KeyError:
-            return ERROR + f"\tContact not found."
-        except IndexError:
-            return ERROR + f"\tNot enough arguments provided."
+        except Exception as e:
+            return f"Error: {str(e)}"
 
     return inner
 
@@ -220,69 +243,97 @@ def input_error(func):
 @input_error
 def parse_input(user_input):
     """Розбирає введений користувачем рядок на команду та аргументи."""
-
-    cmd, *args = user_input.split()
-    cmd = cmd.strip().lower()
-    return cmd, *args
+    try:
+        cmd, *args = user_input.split()
+        cmd = cmd.strip().lower()
+        return cmd, *args
+    except Exception:
+        raise Exception("There are no arguments passed")
 
 
 @input_error
 def add_contact(args, book: AddressBook):
+    if len(args) < 2:
+        raise Exception(
+            '"add" command should contain 2 arguments "name" and "phone number"'
+        )
     name, phone, *_ = args
     record = book.find(name)
-    message = "Contact updated."
+
     if record is None:
         record = Record(name)
-        book.add_record(record)
-        message = "Contact added."
-    if phone:
         record.add_phone(phone)
-    return message
+        book.add_record(record)
+
+    return "Contact added."
 
 
 @input_error
 def change_contact(args, book: AddressBook):
     """Змінює телефон існуючого контакту."""
 
+    if len(args) < 3:
+        raise Exception(
+            "'change' command should contain 3 arguments: name, old_phone, new_phone"
+        )
     name, old_phone, new_phone = args
     record = book.find(name)
     if record:
         return record.edit_phone(old_phone, new_phone)
-    return ERROR + "Contact not found."
+    raise Exception(ERROR + f"Contact with name {name} not found.")
 
-
+@as_table(title="Contact info")
 @input_error
 def show_phone(args, book):
     """Показує телефон контакту."""
 
+    if not args:
+        raise Exception("Contact name missing")
+
     name = args[0]
     record = book.find(name)
     if record:
-        return f"{name}: {', '.join(p.value for p in record.phones)}"
-    return ERROR + "Contact not found."
+        result = {"name": name}
+        for i, phone in enumerate(record.phones, start=1):
+            result[f"phone{i}"] = phone.value
+        return [result]
+    raise Exception(ERROR + f"Contact with name {name} not found.")
 
 
 @input_error
 def add_birthday(args, book: AddressBook):
     """Додає день народження до контакту."""
 
+    if len(args) < 2:
+        raise Exception(
+            ERROR + '"add-birthday" command should contain 2 arguments "name" and "birthday" in format DD.MM.YYYY'
+        )
+
     name, birthday = args
     record = book.find(name)
     if record:
         record.add_birthday(birthday)
         return "Birthday added."
-    return ERROR + "Contact not found."
+    raise Exception(ERROR + f"Contact with name {name} not found.")
 
-
+@as_table(title="Contact Birthday")
 @input_error
 def show_birthday(args, book):
     """Повертає дату дня народження контакту."""
 
+    if len(args) < 1:
+        raise Exception("Contact name missing")
+    
     name = args[0]
     record = book.find(name)
-    if record and record.birthday:
-        return f"{name}'s birthday: {record.birthday}"
-    return ERROR + "Birthday not found."
+
+    if not record:
+        raise Exception(ERROR + f"Contact with name {name} not found.")
+    if not record.birthday:
+        raise Exception(ERROR + "Birthday not found.")
+    
+    return [{"name": record.name, "birthday": record.birthday}]
+        
 
 
 @as_table(title="Upcoming Birthdays")
@@ -293,18 +344,7 @@ def birthdays(book):
     upcoming = book.get_upcoming_birthdays()
     if upcoming:
         return upcoming
-        # return "Upcoming birthdays:\n" + "\n".join(
-        #     f"{item['name']}: {item['congratulation_date']}" for item in upcoming
-        # )
     return "No upcoming birthdays."
-
-
-# def show_all(book):
-#     """Повертає всі контакти у книзі."""
-
-#     if not book:
-#         return "No contacts saved."
-#     return "\n".join(f"{record}" for record in book.data.values())
 
 
 @as_table(title="Address Book")
@@ -316,6 +356,49 @@ def show_all(book):
     else:
         return list(book.data.values())
 
+@input_error  
+def add_address(args, book: AddressBook):
+    """Додає адресу до контакту."""
+
+    if len(args) < 2:
+        raise Exception(
+            ERROR + '"add-address" command should contain 2 arguments "name" and "address"'
+        )
+
+    name, *address = args
+    record = book.find(name)
+    if record:
+        record.address = " ".join(address)
+        return "Address added."
+    raise Exception(ERROR + f"Contact with name {name} not found.")
+
+@input_error
+def add_email(args, book: AddressBook):
+    """Додає email до контакту."""
+
+    if len(args) < 2:
+        raise Exception(
+            ERROR + '"add-email" command should contain 2 arguments "name" and "email"'
+        )
+
+    name, email = args
+    record = book.find(name)
+
+    if not record:
+        raise Exception(ERROR + f"Contact with name {name} not found.")
+    elif not is_valid_email(email):
+        raise Exception(ERROR + "❌ Invalid email format. Please enter a valid email like 'example@domain.com'. The email should contain:\n"
+                 " - letters, digits, dots or dashes before the '@'\n"
+                 " - a domain name after '@' (e.g. gmail, yahoo)\n"
+                 " - and a domain zone like '.com', '.net', '.org', etc. (minimum 2 characters).")
+
+    return record.add_email(email)
+
+    
+def is_valid_email(email) -> bool:
+    """Валідатор для email адреси."""
+    pattern = r'^[\w\.-]+@[\w\.-]+\.\w{2,}$'
+    return re.match(pattern, email) is not None
 
 
 def save_data(book, filename="addressbook.pkl"):
@@ -332,47 +415,58 @@ def load_data(filename="addressbook.pkl"):
 
 
 def main():
-    # book = AddressBook()
-    book = load_data()
+    goodbye_message = "Good bye!"
+    try:
+        book = load_data()
 
-    print("Welcome to the assistant bot!")
-    while True:
-        user_input = input("Enter a command: ")
-        command, *args = parse_input(user_input)
+        print("Welcome to the assistant bot!")
+        while True:
+            user_input = input("Enter a command: ")
+            command, *args = parse_input(user_input)
 
-        if command in ["close", "exit"]:
-            print("Good bye!")
-            break
+            if command in ["close", "exit"]:
+              print(goodbye_message)
+              break
 
-        elif command == "hello":
-            print("How can I help you?")
+            elif command == "hello":
+              print("How can I help you?")
 
-        elif command == "add":
-            print(add_contact(args, book))
+            elif command == "add":
+              print(add_contact(args, book))
 
-        elif command == "change":
-            print(change_contact(args, book))
+            elif command == "change":
+              print(change_contact(args, book))
 
-        elif command == "phone":
-            print(show_phone(args, book))
+            elif command == "phone":
+              print(show_phone(args, book))
 
-        elif command == "all":
-            print(show_all(book))
+            elif command == "all":
+              print(show_all(book))
 
-        elif command == "add-birthday":
-            print(add_birthday(args, book))
+            elif command == "add-birthday":
+              print(add_birthday(args, book))
 
-        elif command == "show-birthday":
-            print(show_birthday(args, book))
+            elif command == "show-birthday":
+              print(show_birthday(args, book))
 
-        elif command == "birthdays":
-            print(birthdays(book))
+            elif command == "birthdays":
+              print(birthdays(book))
 
-        else:
-            print("Invalid command.")
+            elif command == "add-email":
+                print(add_email(args, book))
 
-    save_data(book)
+            elif command == "add-address":
+                print(add_address(args, book))
 
+            else:
+              print("Invalid command.")
+
+    except KeyboardInterrupt:
+        print(goodbye_message)
+
+    finally:
+        print("Saving data...")
+        save_data(book) 
 
 if __name__ == "__main__":
     main()
