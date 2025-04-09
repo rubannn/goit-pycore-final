@@ -1,7 +1,7 @@
 """
 Реалізуйте функціонал для збереження стану AddressBook у файл при закритті програми і відновлення стану при її запуску.
 """
-
+import os
 from collections import UserDict
 import re
 from datetime import datetime, date
@@ -399,18 +399,58 @@ def is_valid_email(email) -> bool:
     pattern = r'^[\w\.-]+@[\w\.-]+\.\w{2,}$'
     return re.match(pattern, email) is not None
 
+def get_data_path(filename="addressbook.pkl") -> str:
+    """
+    Get the full file path to the data file in the project directory.
 
-def save_data(book, filename="addressbook.pkl"):
-    with open(filename, "wb") as f:
+    This function ensures that the 'data' folder exists inside the project
+    directory and returns the full path to the specified filename.
+
+    :param filename: The name of the file to store/load data.
+    :type filename: str
+    :return: Full path to the data file.
+    :rtype: str
+    """
+    project_folder = os.getcwd()
+    data_folder = os.path.join(project_folder, "data")
+    os.makedirs(data_folder, exist_ok=True)
+    return os.path.join(data_folder, filename)
+
+
+def save_data(book: AddressBook, filename="addressbook.pkl"):
+    """
+    Save the AddressBook instance to a data file using pickle.
+
+    The file is saved in a hidden folder inside the user's home directory.
+
+    :param book: The AddressBook instance to be saved.
+    :type book: AddressBook
+    :param filename: The name of the file to save to.
+    :type filename: str
+    """
+    path = get_data_path(filename)
+    with open(path, "wb") as f:
         pickle.dump(book, f)
 
 
-def load_data(filename="addressbook.pkl"):
+def load_data(filename="addressbook.pkl") -> AddressBook:
+    """
+        Load the AddressBook instance from a data file using pickle.
+
+        If the file does not exist, a new empty AddressBook is returned.
+
+        :param filename: The name of the file to load from.
+        :type filename: str
+        :return: Loaded AddressBook instance or a new one if file not found.
+        :rtype: AddressBook
+        """
     try:
-        with open(filename, "rb") as f:
-            return pickle.load(f)
+        path = get_data_path(filename)
+        if os.path.exists(path):
+            with open(path, "rb") as f:
+                return pickle.load(f)
     except FileNotFoundError:
-        return AddressBook()  # Повернення нової адресної книги, якщо файл не знайдено
+        return AddressBook()
 
 
 def main():
