@@ -401,20 +401,20 @@ def is_valid_email(email) -> bool:
 
 def get_data_path(filename="addressbook.pkl") -> str:
     """
-    Get the full file path to the data file in the user's home directory.
+    Get the full file path to the data file in the project directory.
 
-    This function ensures that the application data folder exists and
-    returns the full path to the specified filename.
+    This function ensures that the 'data' folder exists inside the project
+    directory and returns the full path to the specified filename.
 
     :param filename: The name of the file to store/load data.
     :type filename: str
     :return: Full path to the data file.
     :rtype: str
     """
-    user_folder = os.path.expanduser("~")
-    app_folder = os.path.join(user_folder, ".goit_personal_assistant")
-    os.makedirs(app_folder, exist_ok=True)
-    return os.path.join(app_folder, filename)
+    project_folder = os.getcwd()
+    data_folder = os.path.join(project_folder, "data")
+    os.makedirs(data_folder, exist_ok=True)
+    return os.path.join(data_folder, filename)
 
 
 def save_data(book: AddressBook, filename="addressbook.pkl"):
