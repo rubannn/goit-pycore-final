@@ -155,16 +155,16 @@ class Record:
         """Додавання адреси"""
         if len(address.strip()) < 2:
             raise Exception(ERROR + "Address should contain at least 2 characters")
-        
+
         self.address = address
         return "Address added."
-    
+
     def add_email(self, email):
         """Додавання email адреси"""
-       
+
         self.email = email
         return "Email added."
-    
+
     def __str__(self):
         title_name = FIELD + "Contact name:" + RESET_ALL
         title_phones = FIELD + "phones:" + RESET_ALL
@@ -323,7 +323,7 @@ def show_birthday(args, book):
 
     if len(args) < 1:
         raise Exception("Contact name missing")
-    
+
     name = args[0]
     record = book.find(name)
 
@@ -331,9 +331,8 @@ def show_birthday(args, book):
         raise Exception(ERROR + f"Contact with name {name} not found.")
     if not record.birthday:
         raise Exception(ERROR + "Birthday not found.")
-    
+
     return [{"name": record.name, "birthday": record.birthday}]
-        
 
 
 @as_table(title="Upcoming Birthdays")
@@ -356,7 +355,7 @@ def show_all(book):
     else:
         return list(book.data.values())
 
-@input_error  
+@input_error
 def add_address(args, book: AddressBook):
     """Додає адресу до контакту."""
 
@@ -394,7 +393,7 @@ def add_email(args, book: AddressBook):
 
     return record.add_email(email)
 
-    
+
 def is_valid_email(email) -> bool:
     """Валідатор для email адреси."""
     pattern = r'^[\w\.-]+@[\w\.-]+\.\w{2,}$'
@@ -415,6 +414,19 @@ def load_data(filename="addressbook.pkl"):
 
 
 def main():
+    commands_list = {
+        "hello": lambda args: "How can I help you?",
+        "add": lambda args: add_contact(args, book),
+        "change": lambda args: change_contact(args, book),
+        "phone": lambda args: show_phone(args, book),
+        "all": lambda args: show_all(book),
+        "add-birthday": lambda args: add_birthday(args, book),
+        "show-birthday": lambda args: show_birthday(args, book),
+        "birthdays": lambda args: birthdays(book),
+        "add-email": lambda args: add_email(args, book),
+        "add-address": lambda args: add_address(args, book),
+    }
+
     goodbye_message = "Good bye!"
     try:
         book = load_data()
@@ -425,48 +437,21 @@ def main():
             command, *args = parse_input(user_input)
 
             if command in ["close", "exit"]:
-              print(goodbye_message)
-              break
+                print(goodbye_message)
+                break
 
-            elif command == "hello":
-              print("How can I help you?")
-
-            elif command == "add":
-              print(add_contact(args, book))
-
-            elif command == "change":
-              print(change_contact(args, book))
-
-            elif command == "phone":
-              print(show_phone(args, book))
-
-            elif command == "all":
-              print(show_all(book))
-
-            elif command == "add-birthday":
-              print(add_birthday(args, book))
-
-            elif command == "show-birthday":
-              print(show_birthday(args, book))
-
-            elif command == "birthdays":
-              print(birthdays(book))
-
-            elif command == "add-email":
-                print(add_email(args, book))
-
-            elif command == "add-address":
-                print(add_address(args, book))
+            elif command in commands_list:
+                print(commands_list[command](args))
 
             else:
-              print("Invalid command.")
+                print("Invalid command.")
 
     except KeyboardInterrupt:
         print(goodbye_message)
 
     finally:
         print("Saving data...")
-        save_data(book) 
+        save_data(book)
 
 if __name__ == "__main__":
     main()
