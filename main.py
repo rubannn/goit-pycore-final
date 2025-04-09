@@ -108,10 +108,10 @@ class Birthday(Field):
 
 
 class Note:
-    def __init__(self):
-        self.title = None
-        self.note = None
-        self.tag = None
+    def __init__(self, title, text, tag=None):
+        self.title = title
+        self.note = text
+        self.tag = tag
 
 
 class Record:
@@ -161,7 +161,6 @@ class Record:
 
     def add_email(self, email):
         """Додавання email адреси"""
-
         self.email = email
         return "Email added."
 
@@ -175,22 +174,39 @@ class Record:
 
 
 class AddressBook(UserDict):
+    def __init__(self):
+        super().__init__()
+        self.notes = []
+
+    def find(self, name):
+        return self.data.get(name)
+
+    def add_note(self, note):
+        self.notes.append(note)
+
+    def get_notes(self):
+        return self.notes
+
+    def delete_note(self, title):
+        self.notes = [n for n in self.notes if n.title != title]
+
+    def edit_note(self, title, new_text=None, new_tag=None):
+        for note in self.notes:
+            if note.title == title:
+                if new_text:
+                    note.note = new_text
+                if new_tag:
+                    note.tag = new_tag
+                return
+        raise Exception("Note with this title not found")
+
+    def search_notes(self, keyword):
+        return [n for n in self.notes if keyword.lower() in n.title.lower() or (n.tag and keyword.lower() in n.tag.lower())]
+
     def add_record(self, record):
         """Додавання записів"""
         self.data[record.name.value] = record
 
-    def add_notes(self, note):
-        """Додавання записів"""
-        self.data[note.tite] = note
-
-    def find(self, name) -> Record:
-        """Пошук записів за іменем"""
-        return self.data.get(name, None)
-
-    def delete(self, name):
-        """Видалення записів за іменем"""
-        if name in self.data:
-            del self.data[name]
 
     def get_upcoming_birthdays(self):
         days_count = 300
@@ -393,6 +409,48 @@ def add_email(args, book: AddressBook):
 
     return record.add_email(email)
 
+@as_table("Notes")
+def show_notes(book):
+    return book.get_notes()
+
+@input_error
+def add_note(args, book):
+    if len(args) < 2:
+        raise Exception("Use: add-note title text [#tag]")
+    title, *body = args
+    tag = None
+    if body[-1].startswith("#"):
+        tag = body.pop()
+    book.add_note(Note(title, " ".join(body), tag))
+    return "Note added."
+
+@input_error
+def delete_note(args, book):
+    if not args:
+        raise Exception("Provide note title to delete")
+    title = args[0]
+    book.delete_note(title)
+    return "Note deleted."
+
+@input_error
+def edit_note(args, book):
+    if len(args) < 2:
+        raise Exception("Use: edit-note title new_text [#tag]")
+    title, *body = args
+    tag = None
+    if body[-1].startswith("#"):
+        tag = body.pop()
+    new_text = " ".join(body)
+    book.edit_note(title, new_text, tag)
+    return "Note updated."
+
+@as_table("Search Notes")
+@input_error
+def search_notes(args, book):
+    if not args:
+        raise Exception("Enter keyword to search notes")
+    return book.search_notes(args[0])
+
 
 def is_valid_email(email) -> bool:
     """Валідатор для email адреси."""
@@ -409,8 +467,9 @@ def load_data(filename="addressbook.pkl"):
     try:
         with open(filename, "rb") as f:
             return pickle.load(f)
-    except FileNotFoundError:
-        return AddressBook()  # Повернення нової адресної книги, якщо файл не знайдено
+    except (FileNotFoundError, EOFError):
+        return AddressBook()  # якщо файл порожній або відсутній
+
 
 
 def main():
@@ -419,12 +478,17 @@ def main():
         "add": lambda args: add_contact(args, book),
         "change": lambda args: change_contact(args, book),
         "phone": lambda args: show_phone(args, book),
-        "all": lambda args: show_all(book),
+        "all": lambda args: (show_all(book), show_notes(book)),
         "add-birthday": lambda args: add_birthday(args, book),
         "show-birthday": lambda args: show_birthday(args, book),
         "birthdays": lambda args: birthdays(book),
         "add-email": lambda args: add_email(args, book),
         "add-address": lambda args: add_address(args, book),
+        "add-note": lambda args: add_note(args, book),
+        "show-notes": lambda args: show_notes(book),
+        "edit-note": lambda args: edit_note(args, book),
+        "delete-note": lambda args: delete_note(args, book),
+        "search-notes": lambda args: search_notes(args, book),
     }
 
     goodbye_message = "Good bye!"
