@@ -119,6 +119,8 @@ class Record:
         self.name = Name(name)
         self.phones = []
         self.birthday = None
+        self.email = None
+        self.address = None
 
     def add_phone(self, phone):
         """Додавання телефонів"""
@@ -149,11 +151,27 @@ class Record:
         """Додавання дня народження"""
         self.birthday = Birthday(birthday)
 
+    def add_address(self, address: str):
+        """Додавання адреси"""
+        if len(address.strip()) < 2:
+            raise Exception(ERROR + "Address should contain at least 2 characters")
+        
+        self.address = address
+        return "Address added."
+    
+    def add_email(self, email):
+        """Додавання email адреси"""
+       
+        self.email = email
+        return "Email added."
+    
     def __str__(self):
         title_name = FIELD + "Contact name:" + RESET_ALL
         title_phones = FIELD + "phones:" + RESET_ALL
         title_birthday = FIELD + "birthday:" + RESET_ALL
-        return f"{title_name} {self.name.value}, {title_phones} {'; '.join(p.value for p in self.phones)}, {title_birthday} {self.birthday if self.birthday else '---'}"
+        title_email = FIELD + "email:" + RESET_ALL
+        title_address = FIELD + "address:" + RESET_ALL
+        return f"{title_name} {self.name.value}, {title_phones} {'; '.join(p.value for p in self.phones)}, {title_birthday} {self.birthday if self.birthday else '---'}, {title_email} {self.email if self.email else '---'}, {title_address} {self.address if self.address else '---'}"
 
 
 class AddressBook(UserDict):
@@ -338,6 +356,50 @@ def show_all(book):
     else:
         return list(book.data.values())
 
+@input_error  
+def add_address(args, book: AddressBook):
+    """Додає адресу до контакту."""
+
+    if len(args) < 2:
+        raise Exception(
+            ERROR + '"add-address" command should contain 2 arguments "name" and "address"'
+        )
+
+    name, *address = args
+    record = book.find(name)
+    if record:
+        record.address = " ".join(address)
+        return "Address added."
+    raise Exception(ERROR + f"Contact with name {name} not found.")
+
+@input_error
+def add_email(args, book: AddressBook):
+    """Додає email до контакту."""
+
+    if len(args) < 2:
+        raise Exception(
+            ERROR + '"add-email" command should contain 2 arguments "name" and "email"'
+        )
+
+    name, email = args
+    record = book.find(name)
+
+    if not record:
+        raise Exception(ERROR + f"Contact with name {name} not found.")
+    elif not is_valid_email(email):
+        raise Exception(ERROR + "❌ Invalid email format. Please enter a valid email like 'example@domain.com'. The email should contain:\n"
+                 " - letters, digits, dots or dashes before the '@'\n"
+                 " - a domain name after '@' (e.g. gmail, yahoo)\n"
+                 " - and a domain zone like '.com', '.net', '.org', etc. (minimum 2 characters).")
+
+    return record.add_email(email)
+
+    
+def is_valid_email(email) -> bool:
+    """Валідатор для email адреси."""
+    pattern = r'^[\w\.-]+@[\w\.-]+\.\w{2,}$'
+    return re.match(pattern, email) is not None
+
 
 def save_data(book, filename="addressbook.pkl"):
     with open(filename, "wb") as f:
@@ -389,6 +451,12 @@ def main():
 
             elif command == "birthdays":
               print(birthdays(book))
+
+            elif command == "add-email":
+                print(add_email(args, book))
+
+            elif command == "add-address":
+                print(add_address(args, book))
 
             else:
               print("Invalid command.")
