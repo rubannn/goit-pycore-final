@@ -143,6 +143,10 @@ class Record:
         self.email: Email = None
         self.address: Address = None
 
+    def change_name(self, name):
+        self.name = Name(name)
+        return "Contact updated."
+
     def add_phone(self, phone):
         """Додавання телефонів"""
         self.phones.append(Phone(phone))
@@ -172,6 +176,7 @@ class Record:
     def add_birthday(self, birthday):
         """Додавання дня народження"""
         self.birthday = Birthday(birthday)
+        return "Contact updated."
 
     def add_address(self, address: str):
         """Додавання адреси"""
@@ -323,21 +328,33 @@ def add_contact(book: AddressBook):
 @input_error
 def change_contact(book: AddressBook):
     """Змінює телефон існуючого контакту."""
-
     name = input("Please type a name: ")
     # name, old_phone, new_phone = args
     record = book.find(name)
     if record:
         record_keys = record.__dict__.keys()
-        key = input(f"Please pass one of the following fields that you want to change or pass 'exit': {list(record_keys)}: ")
+        input_message = f"Please pass one of the following fields that you want to change or pass 'exit': {list(record_keys)}: "
+        key = input(input_message).strip()
         while key not in list(record_keys):
-            key = input(f"Please pass one of the following fields that you want to change or pass 'exit': {list(record_keys)}: ")
-            if key.strip() == "exit":
+            key = input(input_message).strip()
+            if key == "exit":
                 return
-        if key.strip() == "phones":
+        if key == "phones":
             phones = input("Please pass old and new phones in format <ph1> <ph2>: ")
             old_phone, new_phone = phones.split()
             return record.edit_phone(old_phone, new_phone)
+        elif key == "name":
+            new_name = input("Please type a name: ")
+            return record.change_name(new_name)
+        elif key == "birthday":
+            new_birthday = input("Please type birthday in format DD.MM.YYYY: ")
+            return record.add_birthday(new_birthday)
+        elif key == "email":
+            new_email = input("Please type email: ")
+            return record.add_email(new_email)
+        elif key == "address":
+            new_address = input("Please add address: ")
+            return record.add_address(new_address)
 
     raise Exception(ERROR + f"Contact with name {name} not found.")
 
@@ -364,8 +381,7 @@ def add_birthday(book: AddressBook):
     record = book.find(name)
     if record:
         birthday = input("Please type a birthday in format DD.MM.YYYY (example 01.01.2000): ")
-        record.add_birthday(birthday)
-        return "Birthday added."
+        return record.add_birthday(birthday)
     raise Exception(ERROR + f"Contact with name {name} not found.")
 
 @as_table(title="Contact Birthday")
