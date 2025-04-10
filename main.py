@@ -411,7 +411,8 @@ def get_data_path(filename="addressbook.pkl") -> str:
     :return: Full path to the data file.
     :rtype: str
     """
-    project_folder = os.getcwd()
+    project_folder = os.path.dirname(os.path.abspath(__file__))
+
     data_folder = os.path.join(project_folder, "data")
     os.makedirs(data_folder, exist_ok=True)
     return os.path.join(data_folder, filename)
@@ -444,12 +445,22 @@ def load_data(filename="addressbook.pkl") -> AddressBook:
         :return: Loaded AddressBook instance or a new one if file not found.
         :rtype: AddressBook
         """
+
+    path = get_data_path(filename)
+
+    if not os.path.exists(path):
+        return AddressBook()
+
     try:
-        path = get_data_path(filename)
-        if os.path.exists(path):
-            with open(path, "rb") as f:
-                return pickle.load(f)
-    except FileNotFoundError:
+        with open(path, "rb") as f:
+            return pickle.load(f)
+    except (FileNotFoundError, EOFError, pickle.UnpicklingError):
+        return AddressBook()
+    except Exception as e:
+        print(
+            f"Error {e} has occurred.\n" +
+            f"We have handled this situation and you may proceed ☺️."
+        )
         return AddressBook()
 
 
