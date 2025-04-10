@@ -429,11 +429,11 @@ def show_notes(book):
 def add_note(args, book):
     if len(args) < 2:
         raise Exception("Use: add-note title text [#tag]")
-    title, *body = args
+    title, *note = args
     tag = None
-    if body[-1].startswith("#"):
-        tag = body.pop()
-    book.add_note(Note(title, " ".join(body), tag))
+    if note[-1].startswith("#"):
+        tag = note.pop()
+    book.add_note(Note(title, " ".join(note), tag))
     return "Note added."
 
 @input_error
@@ -448,11 +448,11 @@ def delete_note(args, book):
 def edit_note(args, book):
     if len(args) < 2:
         raise Exception("Use: edit-note title new_text [#tag]")
-    title, *body = args
+    title, *note = args
     tag = None
-    if body[-1].startswith("#"):
-        tag = body.pop()
-    new_text = " ".join(body)
+    if note[-1].startswith("#"):
+        tag = note.pop()
+    new_text = " ".join(note)
     book.edit_note(title, new_text, tag)
     return "Note updated."
 
@@ -460,13 +460,15 @@ def edit_note(args, book):
 def search_notes(args, book):
     if not args:
         return "Keyword required to search notes"
-    keyword = args[0].lower()
-    results = []
-    for note in book.notes:
-        if keyword in note.title.lower() or keyword in note.body.lower():
-            results.append(note)
-    return results
 
+    keyword = args[0].lower()
+    result = []
+
+    for note in book.notes:
+        if keyword in note.title.lower() or keyword in note.note.lower():
+            result.append(f"Title: {note.title}, Note: {note.note}, Tag: {note.tag}")
+
+    return "\n".join(result) if result else "No matching notes found."
 
 def is_valid_email(email) -> bool:
     """Валідатор для email адреси."""
