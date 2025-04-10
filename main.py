@@ -269,15 +269,15 @@ def input_error(func):
     return inner
 
 
-@input_error
-def parse_input(user_input):
-    """Розбирає введений користувачем рядок на команду та аргументи."""
-    try:
-        cmd, *args = user_input.split()
-        cmd = cmd.strip().lower()
-        return cmd, *args
-    except Exception:
-        raise Exception("There are no arguments passed")
+# @input_error
+# def parse_input(user_input):
+#     """Розбирає введений користувачем рядок на команду та аргументи."""
+#     try:
+#         cmd, *args = user_input.split()
+#         cmd = cmd.strip().lower()
+#         return cmd, *args
+#     except Exception:
+#         raise Exception("There are no arguments passed")
 
 
 @input_error
@@ -332,13 +332,13 @@ def change_contact(book: AddressBook):
     # name, old_phone, new_phone = args
     record = book.find(name)
     if record:
-        record_keys = record.__dict__.keys()
-        input_message = f"Please pass one of the following fields that you want to change or pass 'exit': {list(record_keys)}: "
+        record_keys = list(record.__dict__.keys())
+        input_message = f"Please pass one of the following fields that you want to change or pass 'exit': {record_keys}: "
         key = input(input_message).strip()
-        while key not in list(record_keys):
+        while key not in record_keys:
             key = input(input_message).strip()
             if key == "exit":
-                return
+                return "Operation cancelled"
         if key == "phones":
             phones = input("Please pass old and new phones in format <ph1> <ph2>: ")
             old_phone, new_phone = phones.split()
@@ -404,15 +404,17 @@ def show_birthday(book):
 @input_error
 def birthdays(book: AddressBook):
     """Повертає список контактів із днями народження на наступний тиждень."""
-    days_count = int(input("Please enter the number of days within which you want to find upcoming birthdays: "))
-    if days_count < 0:
-        raise Exception("The value should be a positive integer")
+    days_count = input("Please enter the number of days within which you want to find upcoming birthdays: ")
+    try:
+        days_count = int(days_count)
+    except ValueError:
+        raise Exception(ERROR + "The value should be a positive integer")
+    
+    upcoming = book.get_upcoming_birthdays(days_count)
+    if upcoming:
+        return upcoming
     else:
-        upcoming = book.get_upcoming_birthdays(days_count)
-        if upcoming:
-            return upcoming
-        else:
-            return f"No upcoming birthdays in {days_count} days"
+        return f"No upcoming birthdays in {days_count} days"
 
 
 @as_table(title="Address Book")
@@ -538,18 +540,18 @@ def load_data(filename="addressbook.pkl") -> AddressBook:
 
 def main():
     commands_list = {
-        "hello": lambda _: "How can I help you?",
-        "add": lambda _: add_contact(book),
-        "change": lambda _: change_contact(book),
-        "phone": lambda _: show_phone(book),
-        "all": lambda _: show_all(book),
-        "add-birthday": lambda _: add_birthday(book),
-        "show-birthday": lambda _: show_birthday(book),
-        "birthdays": lambda _: birthdays(book),
-        "add-email": lambda _: add_email(book),
-        "add-address": lambda _: add_address(book),
-        "add-phone": lambda _: add_phone(book),
-        "find": lambda _: find_contact(book),
+        "hello": lambda: "How can I help you?",
+        "add": lambda book: add_contact(book),
+        "change": lambda book: change_contact(book),
+        "phone": lambda book: show_phone(book),
+        "all": lambda book: show_all(book),
+        "add-birthday": lambda book: add_birthday(book),
+        "show-birthday": lambda book: show_birthday(book),
+        "birthdays": lambda book: birthdays(book),
+        "add-email": lambda book: add_email(book),
+        "add-address": lambda book: add_address(book),
+        "add-phone": lambda book: add_phone(book),
+        "find": lambda book: find_contact(book),
     }
 
     goodbye_message = "Good bye!"
@@ -558,15 +560,14 @@ def main():
 
         print("Welcome to the assistant bot!")
         while True:
-            user_input = input("Enter a command: ")
-            command, *args = parse_input(user_input)
+            command = input("Enter a command: ").strip().lower()
  
             if command in ["close", "exit"]:
                 print(goodbye_message)
                 break
 
             elif command in commands_list:
-                print(commands_list[command](args) or '')
+                print(commands_list[command](book))
 
             else:
                 print("Invalid command.")
