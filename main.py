@@ -239,8 +239,13 @@ class AddressBook(UserDict):
         if not args:
             return "Keyword required to search notes"
         keyword = args[0]
-        return [n for n in book.notes if
-                keyword.lower() in n.title.lower() or (n.tag and keyword.lower() in n.tag.lower())]
+        return [
+            n
+            for n in book.notes
+            if keyword.lower() in n.title.lower()
+            or (n.tag and keyword.lower() in n.tag.lower())
+        ]
+
     def add_record(self, record: Record):
         """Додавання записів"""
         self.data[record.name.value] = record
@@ -518,9 +523,11 @@ def add_email(book: AddressBook):
     email = input("Please type email: ")
     return record.add_email(email)
 
+
 @as_table("Notes")
 def show_notes(book):
     return book.get_notes()
+
 
 @input_error
 def add_note(args, book):
@@ -533,6 +540,7 @@ def add_note(args, book):
     book.add_note(Note(title, " ".join(note), tag))
     return "Note added."
 
+
 @input_error
 def delete_note(args, book):
     if not args:
@@ -540,6 +548,7 @@ def delete_note(args, book):
     title = args[0]
     book.delete_note(title)
     return "Note deleted."
+
 
 @input_error
 def edit_note(args, book):
@@ -552,6 +561,7 @@ def edit_note(args, book):
     new_text = " ".join(note)
     book.edit_note(title, new_text, tag)
     return "Note updated."
+
 
 @as_table(title="Found Notes:")
 @input_error
@@ -567,12 +577,13 @@ def search_notes(args, book):
                 "Title": note.title,
                 "Note": note.note,
                 "Tag": note.tag
-            })
+                })
 
     if not result:
         raise Exception("No matching notes found.")
 
     return result
+
 
 def is_valid_email(email) -> bool:
     """Валідатор для email адреси."""
@@ -691,6 +702,8 @@ def greeting_message(commands_list):
 
 def main():
     commands_list = {
+        "exit": {"description": "Leave the app", "handler": None},
+        "close": {"description": "Leave the app", "handler": None},
         "hello": {
             "description": "Greeting message",
             "handler": lambda: "How can I help you?",
@@ -743,20 +756,26 @@ def main():
             "description": "Delete contact",
             "handler": lambda book: delete_contact(book),
         },
-        "exit": {"description": "Leave the app", "handler": None},
-        "close": {"description": "Leave the app", "handler": None},
-        "add-note": {"description": "", "handler": lambda args: add_note(args, book)},
-        "show-notes": {"description": "", "handler": lambda args: show_notes(book)},
-        "edit-note": {"description": "", "handler": lambda args: edit_note(args, book)},
+        "add-note": {
+            "description": "...Add description...",
+            "handler": lambda args: add_note(args, book),
+        },
+        "show-notes": {
+            "description": "...Add description...",
+            "handler": lambda args: show_notes(book),
+        },
+        "edit-note": {
+            "description": "...Add description...",
+            "handler": lambda args: edit_note(args, book),
+        },
         "delete-note": {
-            "description": "",
+            "description": "...Add description...",
             "handler": lambda args: delete_note(args, book),
         },
         "search-notes": {
-            "description": "",
+            "description": "...Add description...",
             "handler": lambda args: search_notes(args, book),
         },
-        
     }
 
     goodbye_message = "Good bye!"
