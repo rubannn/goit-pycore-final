@@ -1,3 +1,4 @@
+
 # Address Book Assistant
 
 A command-line address book application for managing contacts with phone numbers, emails, birthdays, and addresses.
@@ -27,16 +28,15 @@ A command-line address book application for managing contacts with phone numbers
    git clone https://github.com/rubannn/goit-pycore-final.git
 2. Navigate to the project directory:
    ```bash
-    cd address-book-assistant
+   cd address-book-assistant
 3. Install required dependencies:
    ```bash
-    pip install -r requirements.txt
+   pip install -r requirements.txt
 ## Usage
-
 Run the application:
 
-    ```bash
-    python main.py
+	python main.py
+
 
 ### Available Commands
 
