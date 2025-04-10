@@ -35,7 +35,6 @@ def as_table(title="Table"):
         @wraps(func)
         def wrapper(*args, **kwargs):
             result = func(*args, **kwargs)
-
             # Проверка: если это не список или пустой список — вернём как есть
             if not isinstance(result, list) or not result:
                 return result
@@ -95,7 +94,7 @@ class Name(Field):
 
 
 class Phone(Field):
-    def __init__(self, value):
+    def __init__(self, value: str):
         if not re.fullmatch(r"\d{10}", value):
             raise Exception(
                 ERROR + f"Incorrect phone format {value}. Should be 10 digits."
@@ -141,9 +140,9 @@ class Note:
 
 
 class Record:
-    def __init__(self, name):
+    def __init__(self, name: str):
         self.name = Name(name)
-        self.phones = []
+        self.phones: list[Phone] = []
         self.birthday: Birthday = None
         self.email: Email = None
         self.address: Address = None
@@ -213,7 +212,7 @@ class AddressBook(UserDict):
         """Додавання записів"""
         self.data[record.name.value] = record
 
-    def update_record_name(self, old_name, record):
+    def update_record_name(self, old_name: str, record: Record):
         self.delete(old_name)
         self.add_record(record)
 
@@ -278,7 +277,7 @@ def input_error(func):
         try:
             return func(*args, **kwargs)
         except Exception as e:
-            return (ERROR + f"Error: {str(e)}")
+            return ERROR + f"Error: {str(e)}"
 
     return inner
 
@@ -522,6 +521,7 @@ def find_contact(book: AddressBook):
 
     return "Contact not found."
 
+
 @input_error
 def delete_contact(book: AddressBook):
     name = input("Please type a name: ").strip()
@@ -585,6 +585,30 @@ def load_data(filename="addressbook.pkl") -> AddressBook:
                 return book
     except FileNotFoundError:
         return AddressBook()  # Повернення нової адресної книги, якщо файл не знайдено
+    
+
+@as_table(title="Command list")
+def greeting_message():
+    return [
+    {"command": "hello", "description": "Greeting message"},
+    {"command": "add", "description": "Add new contact"},
+    {"command": "change", "description": "Change existing contact"},
+    {"command": "add-phone", "description": "Add phone to existing contact"},
+    {"command": "add-email", "description": "Add emial to existing contact"},
+    {"command": "add-birthday", "description": "Add birthday to existing contact"},
+    {"command": "add-address", "description": "Add address to existing contact"},
+    {"command": "all", "description": "Show all contacts"},
+    {"command": "phone", "description": "Show the phone of existing contact"},
+    {"command": "show-birthday", "description": "Show birthday of existing contact"},
+    {
+        "command": "birthdays",
+        "description": "Show upcoming birthdays for a given period of time",
+    },
+    {"command": "find", "description": "Find contact by a given field"},
+    {"command": "delete", "description": "Delete contact"},
+    {"command": "exit", "description": "Leave the app"},
+    {"command": "close", "description": "Leave the app"},
+]
 
 
 def main():
@@ -601,13 +625,14 @@ def main():
         "add-address": lambda book: add_address(book),
         "add-phone": lambda book: add_phone(book),
         "find": lambda book: find_contact(book),
-        "delete": lambda book: delete_contact(book)
+        "delete": lambda book: delete_contact(book),
     }
 
     goodbye_message = "Good bye!"
     try:
         book = load_data()
         print("Welcome to the assistant bot!")
+        print(greeting_message())
         while True:
             command = input("Enter a command: ").strip()
             if command:
