@@ -232,6 +232,9 @@ class AddressBook(UserDict):
         """Видалення записів за іменем"""
         if name in self.data:
             del self.data[name]
+            return "Contact deleted"
+        else:
+            raise Exception(ERROR + f"Contact with name {name} not found.")
 
     def get_upcoming_birthdays(self, days_count):
         result = []
@@ -519,6 +522,11 @@ def find_contact(book: AddressBook):
 
     return "Contact not found."
 
+@input_error
+def delete_contact(book: AddressBook):
+    name = input("Please type a name: ").strip()
+    return book.delete(name)
+
 
 def get_data_path(filename="addressbook.pkl") -> str:
     """
@@ -593,6 +601,7 @@ def main():
         "add-address": lambda book: add_address(book),
         "add-phone": lambda book: add_phone(book),
         "find": lambda book: find_contact(book),
+        "delete": lambda book: delete_contact(book)
     }
 
     goodbye_message = "Good bye!"
@@ -600,7 +609,9 @@ def main():
         book = load_data()
         print("Welcome to the assistant bot!")
         while True:
-            command = input("Enter a command: ").strip().lower().split()[0]
+            command = input("Enter a command: ").strip()
+            if command:
+                command = command.lower().split()[0]
 
             if command in ["close", "exit"]:
                 print(goodbye_message)
