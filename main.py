@@ -456,19 +456,28 @@ def edit_note(args, book):
     book.edit_note(title, new_text, tag)
     return "Note updated."
 
-
+@as_table(title="Found Notes:")
+@input_error
+@as_table(title="Search Results")
+@input_error
 def search_notes(args, book):
     if not args:
-        return "Keyword required to search notes"
+        raise Exception("Keyword required to search notes")
 
     keyword = args[0].lower()
     result = []
-
     for note in book.notes:
         if keyword in note.title.lower() or keyword in note.note.lower():
-            result.append(f"Title: {note.title}, Note: {note.note}, Tag: {note.tag}")
+            result.append({
+                "Title": note.title,
+                "Note": note.note,
+                "Tag": note.tag
+            })
 
-    return "\n".join(result) if result else "No matching notes found."
+    if not result:
+        raise Exception("No matching notes found.")
+
+    return result
 
 def is_valid_email(email) -> bool:
     """Валідатор для email адреси."""
