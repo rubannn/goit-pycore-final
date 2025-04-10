@@ -531,15 +531,32 @@ def show_notes(book):
 
 @input_error
 def add_note(args, book):
-    if len(args) < 2:
-        raise Exception("Use: add-note title text [#tag]")
-    title, *note = args
-    tag = None
-    if note[-1].startswith("#"):
-        tag = note.pop()
-    book.add_note(Note(title, " ".join(note), tag))
-    return "Note added."
+    title = input("Please type a title for the note: ").strip()
+    while len(title) < 1:
+        title = input(
+            "Please type a title or pass 'exit' to enter another command: "
+        ).strip()
+        if title.lower() == "exit":
+            return
 
+    text = input("Please type the content of the note: ").strip()
+    while len(text) < 1:
+        text = input(
+            "Note cannot be empty. Please enter text or type 'exit' to cancel: "
+        ).strip()
+        if text.lower() == "exit":
+            return
+
+    tag = input("Add tag (optional, format #tag) or leave blank: ").strip()
+    if tag and not tag.startswith("#"):
+        print("Invalid tag format. Tags should start with '#' (e.g., #todo).")
+        print("You can edit the tag later using the 'edit-note' command.")
+        tag = None
+
+    note = Note(title, text, tag)
+    book.add_note(note)
+
+    return "Note added."
 
 @input_error
 def delete_note(args, book):
