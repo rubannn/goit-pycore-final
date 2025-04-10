@@ -494,7 +494,7 @@ def main():
         "add": lambda args: add_contact(args, book),
         "change": lambda args: change_contact(args, book),
         "phone": lambda args: show_phone(args, book),
-        "all": lambda args: (show_all(book)),
+        "all": lambda args: show_all(book),
         "add-birthday": lambda args: add_birthday(args, book),
         "show-birthday": lambda args: show_birthday(args, book),
         "birthdays": lambda args: birthdays(book),
