@@ -331,53 +331,7 @@ def input_error(func):
 #         raise Exception("There are no arguments passed")
 
 
-@input_error
-def add_contact(book: AddressBook):
-    name = input("Please type a name: ").strip()
-    while len(name) < 2:
-        name = input(
-            "Please type a name or pass 'exit' to enter another command: "
-        ).strip()
-        if name == "exit":
-            return
 
-    record = book.find(name)
-
-    if record is None:
-        record = Record(name)
-        phones = input(
-            "Input phones in format: <ph1> <ph2> ... (each phone 10 digits length): "
-        )
-        for phone in phones.split():
-            try:
-                record.add_phone(phone)
-            except Exception as e:
-                raise Exception(str(e))
-
-        if len(record.phones) < 1:
-            return
-        email = input("Add email or leave blanc: ")
-        if len(email.strip()):
-            try:
-                record.add_email(email.strip())
-            except Exception:
-                print(ERROR + EMAIL_VALIDATION_ERROR)
-                print("You can add email later using the command 'add-email'")
-        birthday = input("Add birthday in format DD.MM.YYYY or leave blanc: ")
-        if len(birthday.strip()):
-            try:
-                record.add_birthday(birthday.strip())
-            except Exception:
-                print(ERROR + BIRTHDAY_VALIDATION_ERROR)
-                print("You can add birthday later using the command 'add-birthday'")
-        address = input("Add address or leave blanc: ")
-        if len(address.strip()):
-            record.add_address(address)
-        book.add_record(record)
-    else:
-        raise Exception(ERROR + f"contact with name {name} already exists")
-
-    return "Contact added."
 
 
 @input_error
@@ -531,14 +485,33 @@ def show_notes(book):
 
 @input_error
 def add_note(args, book):
-    if len(args) < 2:
-        raise Exception("Use: add-note title text [#tag]")
-    title, *note = args
-    tag = None
-    if note[-1].startswith("#"):
-        tag = note.pop()
-    book.add_note(Note(title, " ".join(note), tag))
+    title = input("Please type a title for the note: ").strip()
+    while len(title) < 1:
+        title = input(
+            "Please type a title or pass 'exit' to enter another command: "
+        ).strip()
+        if title.lower() == "exit":
+            return
+
+    text = input("Please type the content of the note: ").strip()
+    while len(text) < 1:
+        text = input(
+            "Note cannot be empty. Please enter text or type 'exit' to cancel: "
+        ).strip()
+        if text.lower() == "exit":
+            return
+
+    tag = input("Add tag (optional, format #tag) or leave blank: ").strip()
+    if tag and not tag.startswith("#"):
+        print("Invalid tag format. Tags should start with '#' (e.g., #todo).")
+        print("You can edit the tag later using the 'edit-note' command.")
+        tag = None
+
+    note = Note(title, text, tag)
+    book.add_note(note)
+
     return "Note added."
+
 
 
 @input_error
