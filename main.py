@@ -587,57 +587,83 @@ def load_data(filename="addressbook.pkl") -> AddressBook:
         return AddressBook()
     except Exception as e:
         print(
-            f"Error {e} has occurred.\n" +
-            f"We have handled this situation and you may proceed ☺️."
+            f"Error {e} has occurred.\n"
+            + f"We have handled this situation and you may proceed ☺️."
         )
         return AddressBook()
 
+
 @as_table(title="Command list")
-def greeting_message():
+def greeting_message(commands_list):
     return [
-    {"command": "hello", "description": "Greeting message"},
-    {"command": "add", "description": "Add new contact"},
-    {"command": "change", "description": "Change existing contact"},
-    {"command": "add-phone", "description": "Add phone to existing contact"},
-    {"command": "add-email", "description": "Add emial to existing contact"},
-    {"command": "add-birthday", "description": "Add birthday to existing contact"},
-    {"command": "add-address", "description": "Add address to existing contact"},
-    {"command": "all", "description": "Show all contacts"},
-    {"command": "phone", "description": "Show the phone of existing contact"},
-    {"command": "show-birthday", "description": "Show birthday of existing contact"},
-    {
-        "command": "birthdays",
-        "description": "Show upcoming birthdays for a given period of time",
-    },
-    {"command": "find", "description": "Find contact by a given field"},
-    {"command": "delete", "description": "Delete contact"},
-    {"command": "exit", "description": "Leave the app"},
-    {"command": "close", "description": "Leave the app"},
-]
+        {"command": command, "description": commands_list[command]["description"]}
+        for command in commands_list
+    ]
 
 
 def main():
     commands_list = {
-        "hello": lambda: "How can I help you?",
-        "add": lambda book: add_contact(book),
-        "change": lambda book: change_contact(book),
-        "phone": lambda book: show_phone(book),
-        "all": lambda book: show_all(book),
-        "add-birthday": lambda book: add_birthday(book),
-        "show-birthday": lambda book: show_birthday(book),
-        "birthdays": lambda book: birthdays(book),
-        "add-email": lambda book: add_email(book),
-        "add-address": lambda book: add_address(book),
-        "add-phone": lambda book: add_phone(book),
-        "find": lambda book: find_contact(book),
-        "delete": lambda book: delete_contact(book),
+        "hello": {
+            "description": "Greeting message",
+            "handler": lambda: "How can I help you?",
+        },
+        "add": {
+            "description": "Add new contact",
+            "handler": lambda book: add_contact(book),
+        },
+        "change": {
+            "description": "Change existing contact",
+            "handler": lambda book: change_contact(book),
+        },
+        "add-phone": {
+            "description": "Add phone to existing contact",
+            "handler": lambda book: add_phone(book),
+        },
+        "add-email": {
+            "description": "Add email to existing contact",
+            "handler": lambda book: add_email(book),
+        },
+        "add-birthday": {
+            "description": "Add birthday to existing contact",
+            "handler": lambda book: add_birthday(book),
+        },
+        "add-address": {
+            "description": "Add address to existing contact",
+            "handler": lambda book: add_address(book),
+        },
+        "all": {
+            "description": "Show all contacts",
+            "handler": lambda book: show_all(book),
+        },
+        "phone": {
+            "description": "Show the phone of existing contact",
+            "handler": lambda book: show_phone(book),
+        },
+        "show-birthday": {
+            "description": "Show birthday of existing contact",
+            "handler": lambda book: show_birthday(book),
+        },
+        "birthdays": {
+            "description": "Show upcoming birthdays for a given period of time",
+            "handler": lambda book: birthdays(book),
+        },
+        "find": {
+            "description": "Find contact by a given field",
+            "handler": lambda book: find_contact(book),
+        },
+        "delete": {
+            "description": "Delete contact",
+            "handler": lambda book: delete_contact(book),
+        },
+        "exit": {"description": "Leave the app", "handler": None},
+        "close": {"description": "Leave the app", "handler": None},
     }
 
     goodbye_message = "Good bye!"
     try:
         book = load_data()
         print("Welcome to the assistant bot!")
-        print(greeting_message())
+        print(greeting_message(commands_list))
         while True:
             command = input("Enter a command: ").strip()
             if command:
@@ -648,7 +674,7 @@ def main():
                 break
 
             elif command in commands_list:
-                print(commands_list[command](book))
+                print(commands_list[command]["handler"](book))
 
             else:
                 print("Invalid command.")
