@@ -28,7 +28,7 @@ A command-line address book application for managing contacts with phone numbers
    git clone https://github.com/rubannn/goit-pycore-final.git
 2. Navigate to the project directory:
    ```bash
-   cd address-book-assistant
+   cd goit-pycore-final
 3. Install required dependencies:
    ```bash
    pip install -r requirements.txt
