@@ -1,7 +1,3 @@
-"""
-Реалізуйте функціонал для збереження стану AddressBook у файл при закритті програми і відновлення стану при її запуску.
-"""
-
 import os
 from collections import UserDict
 import re
@@ -11,6 +7,7 @@ import pickle
 from colorama import init, Fore, Style
 from rich.console import Console
 from rich.table import Table
+from rich.box import ROUNDED
 from functools import wraps
 from difflib import SequenceMatcher
 
@@ -50,9 +47,24 @@ def as_table(title="Table"):
                 return result  # не поддерживаемые типы
 
             headers = [h for h in headers if h != "end-section"]
-            table = Table(title=title)
+            console = Console()
+            terminal_width = console.width
+
+            table = Table(
+                title=title,
+                expand=True,
+                width=terminal_width - 10,
+                show_header=True,
+                show_edge=True,
+                box=ROUNDED,
+            )
             for i, h in enumerate(headers):
-                table.add_column(h.capitalize(), style=COLORS[i % len(COLORS)])
+                table.add_column(
+                    h.capitalize(),
+                    style=COLORS[i % len(COLORS)],
+                    no_wrap=False,
+                    ratio=1,
+                )
 
             end_section = False
             for item in result:
@@ -76,7 +88,6 @@ def as_table(title="Table"):
                 table.add_row(*row, end_section=end_section)
                 end_section = False
 
-            console = Console()
             console.print(table)
             return ""  # для предотвращения повторного вывода
 
@@ -761,7 +772,11 @@ def predict_command(commands_list, ratio, candidate=None):
             if similarity_ratio(candidate, command) > ratio:
                 candidate_list.append({"similar commands": command})
 
-    return candidate_list if candidate_list else "No similar commands found."
+    return (
+        candidate_list
+        if candidate_list
+        else [{"similar commands": "No similar commands found."}]
+    )
 
 
 def main():
@@ -875,7 +890,6 @@ def main():
 
             else:
                 predict_command(commands_list, 50, command)
-                print("Invalid command.")
 
     except KeyboardInterrupt:
         print("\nSaving data...")
