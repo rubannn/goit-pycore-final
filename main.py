@@ -1,7 +1,3 @@
-"""
-Реалізуйте функціонал для збереження стану AddressBook у файл при закритті програми і відновлення стану при її запуску.
-"""
-
 import os
 from collections import UserDict
 import re
@@ -11,7 +7,9 @@ import pickle
 from colorama import init, Fore, Style
 from rich.console import Console
 from rich.table import Table
+from rich.box import ROUNDED
 from functools import wraps
+from difflib import SequenceMatcher
 
 
 COLORS = ["cyan", "magenta", "green", "yellow", "blue", "bright_red", "white"]
@@ -48,11 +46,31 @@ def as_table(title="Table"):
             else:
                 return result  # не поддерживаемые типы
 
-            table = Table(title=title)
-            for i, h in enumerate(headers):
-                table.add_column(h.capitalize(), style=COLORS[i % len(COLORS)])
+            headers = [h for h in headers if h != "end-section"]
+            console = Console()
+            terminal_width = console.width
 
+            table = Table(
+                title=title,
+                expand=True,
+                width=terminal_width - 10,
+                show_header=True,
+                show_edge=True,
+                box=ROUNDED,
+            )
+            for i, h in enumerate(headers):
+                table.add_column(
+                    h.capitalize(),
+                    style=COLORS[i % len(COLORS)],
+                    no_wrap=False,
+                    ratio=1,
+                )
+
+            end_section = False
             for item in result:
+                if isinstance(item, dict) and item.get("end-section"):
+                    end_section = True
+
                 row = []
                 for h in headers:
                     value = (
@@ -67,9 +85,9 @@ def as_table(title="Table"):
                     else:
                         value = str(value)
                     row.append(value)
-                table.add_row(*row)
+                table.add_row(*row, end_section=end_section)
+                end_section = False
 
-            console = Console()
             console.print(table)
             return ""  # для предотвращения повторного вывода
 
@@ -558,6 +576,7 @@ def add_note(args, book):
 
     return "Note added."
 
+
 @input_error
 def delete_note(args, book):
     if not args:
@@ -590,11 +609,7 @@ def search_notes(args, book):
     result = []
     for note in book.notes:
         if keyword in note.title.lower() or keyword in note.note.lower():
-            result.append({
-                "Title": note.title,
-                "Note": note.note,
-                "Tag": note.tag
-                })
+            result.append({"Title": note.title, "Note": note.note, "Tag": note.tag})
 
     if not result:
         raise Exception("No matching notes found.")
@@ -642,6 +657,28 @@ def find_contact(book: AddressBook):
 def delete_contact(book: AddressBook):
     name = input("Please type a name: ").strip()
     return book.delete(name)
+
+
+@as_table(title="Search Tags Result")
+def search_tags(book: AddressBook):
+    value = input("Please pass a value for tag search: ").strip()
+
+    result = []
+    for note in book.notes:
+        if note.tag and note.tag.lower() == value.lower():
+            result.append({"Title": note.title, "Note": note.note, "Tag": note.tag})
+    if result:
+        return result
+    return "Tag not found."
+
+
+@as_table(title="Sort Notes by Tags Result")
+def sort_tags(book: AddressBook):
+    return (
+        sorted(book.notes, key=lambda x: (x.tag is None, x.tag or ""))
+        if book.notes
+        else "No notes found."
+    )
 
 
 def get_data_path(filename="addressbook.pkl") -> str:
@@ -712,19 +749,38 @@ def load_data(filename="addressbook.pkl") -> AddressBook:
 @as_table(title="Command list")
 def greeting_message(commands_list):
     return [
-        {"command": command, "description": commands_list[command]["description"]}
+        {
+            "command": command,
+            "description": commands_list[command].get("description", ""),
+            "end-section": commands_list[command].get("end-section", ""),
+        }
         for command in commands_list
     ]
 
 
+@as_table(title="List of Similar Commands")
+def predict_command(commands_list, ratio, candidate=None):
+    """Predicts the command based on the input."""
+
+    def similarity_ratio(s1, s2):
+        """returns the percentage similarity between two strings"""
+        return SequenceMatcher(None, s1, s2).ratio() * 100
+
+    candidate_list = []
+    if candidate:
+        for command in commands_list:
+            if similarity_ratio(candidate, command) > ratio:
+                candidate_list.append({"similar commands": command})
+
+    return (
+        candidate_list
+        if candidate_list
+        else [{"similar commands": "No similar commands found."}]
+    )
+
+
 def main():
     commands_list = {
-        "exit": {"description": "Leave the app", "handler": None},
-        "close": {"description": "Leave the app", "handler": None},
-        "hello": {
-            "description": "Greeting message",
-            "handler": lambda: "How can I help you?",
-        },
         "add": {
             "description": "Add new contact",
             "handler": lambda book: add_contact(book),
@@ -772,6 +828,7 @@ def main():
         "delete": {
             "description": "Delete contact",
             "handler": lambda book: delete_contact(book),
+            "end-section": True,
         },
         "add-note": {
             "description": "...Add description...",
@@ -792,6 +849,26 @@ def main():
         "search-notes": {
             "description": "...Add description...",
             "handler": lambda args: search_notes(args, book),
+            "end-section": True,
+        },
+        "search-tags": {
+            "description": "Find notes by tag",
+            "handler": lambda book: search_tags(book),
+        },
+        "sort-tags": {
+            "description": "Sort notes by tag",
+            "handler": lambda book: sort_tags(book),
+            "end-section": True,
+        },
+        "exit": {"description": "Leave the app", "handler": None},
+        "close": {"description": "Leave the app", "handler": None},
+        "hello": {
+            "description": "Greeting message",
+            "handler": lambda: "How can I help you?",
+        },
+        "help": {
+            "description": "Full list of commands",
+            "handler": lambda _: greeting_message(commands_list),
         },
     }
 
@@ -812,7 +889,7 @@ def main():
                 print(commands_list[command]["handler"](book))
 
             else:
-                print("Invalid command.")
+                predict_command(commands_list, 50, command)
 
     except KeyboardInterrupt:
         print("\nSaving data...")
