@@ -458,8 +458,6 @@ def edit_note(args, book):
 
 @as_table(title="Found Notes:")
 @input_error
-@as_table(title="Search Results")
-@input_error
 def search_notes(args, book):
     if not args:
         raise Exception("Keyword required to search notes")
