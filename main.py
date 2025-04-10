@@ -48,11 +48,17 @@ def as_table(title="Table"):
             else:
                 return result  # не поддерживаемые типы
 
+            headers = [h for h in headers if h != "end-section"]
             table = Table(title=title)
             for i, h in enumerate(headers):
                 table.add_column(h.capitalize(), style=COLORS[i % len(COLORS)])
 
+            end_section = False
             for item in result:
+                if isinstance(item, dict) and item.get("end-section"):
+                    end_section = True
+
+
                 row = []
                 for h in headers:
                     value = (
@@ -67,7 +73,8 @@ def as_table(title="Table"):
                     else:
                         value = str(value)
                     row.append(value)
-                table.add_row(*row)
+                table.add_row(*row, end_section=end_section)
+                end_section = False
 
             console = Console()
             console.print(table)
@@ -558,6 +565,7 @@ def add_note(args, book):
 
     return "Note added."
 
+
 @input_error
 def delete_note(args, book):
     if not args:
@@ -590,11 +598,7 @@ def search_notes(args, book):
     result = []
     for note in book.notes:
         if keyword in note.title.lower() or keyword in note.note.lower():
-            result.append({
-                "Title": note.title,
-                "Note": note.note,
-                "Tag": note.tag
-                })
+            result.append({"Title": note.title, "Note": note.note, "Tag": note.tag})
 
     if not result:
         raise Exception("No matching notes found.")
@@ -655,6 +659,7 @@ def search_tags(book: AddressBook):
     if result:
         return result
     return "Tag not found."
+
 
 @as_table(title="Sort Notes by Tags Result")
 def sort_tags(book: AddressBook):
@@ -733,19 +738,17 @@ def load_data(filename="addressbook.pkl") -> AddressBook:
 @as_table(title="Command list")
 def greeting_message(commands_list):
     return [
-        {"command": command, "description": commands_list[command]["description"]}
+        {
+            "command": command,
+            "description": commands_list[command].get("description", ""),
+            "end-section": commands_list[command].get("end-section", ""),
+        }
         for command in commands_list
     ]
 
 
 def main():
     commands_list = {
-        "exit": {"description": "Leave the app", "handler": None},
-        "close": {"description": "Leave the app", "handler": None},
-        "hello": {
-            "description": "Greeting message",
-            "handler": lambda: "How can I help you?",
-        },
         "add": {
             "description": "Add new contact",
             "handler": lambda book: add_contact(book),
@@ -793,6 +796,7 @@ def main():
         "delete": {
             "description": "Delete contact",
             "handler": lambda book: delete_contact(book),
+            "end-section": True,
         },
         "add-note": {
             "description": "...Add description...",
@@ -813,6 +817,7 @@ def main():
         "search-notes": {
             "description": "...Add description...",
             "handler": lambda args: search_notes(args, book),
+            "end-section": True,
         },
         "search-tags": {
             "description": "Find notes by tag",
@@ -821,6 +826,13 @@ def main():
         "sort-tags": {
             "description": "Sort notes by tag",
             "handler": lambda book: sort_tags(book),
+            "end-section": True,
+        },
+                "exit": {"description": "Leave the app", "handler": None},
+        "close": {"description": "Leave the app", "handler": None},
+        "hello": {
+            "description": "Greeting message",
+            "handler": lambda: "How can I help you?",
         },
         "help": {
             "description": "Full list of commands",
