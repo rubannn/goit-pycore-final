@@ -133,10 +133,11 @@ class Address(Field):
 
 
 class Note:
-    def __init__(self):
-        self.title = None
-        self.note = None
-        self.tag = None
+
+    def __init__(self, title, text, tag=None):
+        self.title = title
+        self.note = text
+        self.tag = tag
 
 
 class Record:
@@ -208,6 +209,43 @@ class Record:
 
 
 class AddressBook(UserDict):
+    def __init__(self):
+        super().__init__()
+        self.notes = []
+
+    def find(self, name):
+        return self.data.get(name)
+
+    def add_note(self, note):
+        self.notes.append(note)
+
+    def get_notes(self):
+        return self.notes
+
+    def delete_note(self, title):
+        self.notes = [n for n in self.notes if n.title != title]
+
+    def edit_note(self, title, new_text=None, new_tag=None):
+        for note in self.notes:
+            if note.title == title:
+                if new_text:
+                    note.note = new_text
+                if new_tag:
+                    note.tag = new_tag
+                return
+        raise Exception("Note with this title not found")
+
+    def search_notes(args, book):
+        if not args:
+            return "Keyword required to search notes"
+        keyword = args[0]
+        return [
+            n
+            for n in book.notes
+            if keyword.lower() in n.title.lower()
+            or (n.tag and keyword.lower() in n.tag.lower())
+        ]
+
     def add_record(self, record: Record):
         """Додавання записів"""
         self.data[record.name.value] = record
@@ -486,6 +524,67 @@ def add_email(book: AddressBook):
     return record.add_email(email)
 
 
+@as_table("Notes")
+def show_notes(book):
+    return book.get_notes()
+
+
+@input_error
+def add_note(args, book):
+    if len(args) < 2:
+        raise Exception("Use: add-note title text [#tag]")
+    title, *note = args
+    tag = None
+    if note[-1].startswith("#"):
+        tag = note.pop()
+    book.add_note(Note(title, " ".join(note), tag))
+    return "Note added."
+
+
+@input_error
+def delete_note(args, book):
+    if not args:
+        raise Exception("Provide note title to delete")
+    title = args[0]
+    book.delete_note(title)
+    return "Note deleted."
+
+
+@input_error
+def edit_note(args, book):
+    if len(args) < 2:
+        raise Exception("Use: edit-note title new_text [#tag]")
+    title, *note = args
+    tag = None
+    if note[-1].startswith("#"):
+        tag = note.pop()
+    new_text = " ".join(note)
+    book.edit_note(title, new_text, tag)
+    return "Note updated."
+
+
+@as_table(title="Found Notes:")
+@input_error
+def search_notes(args, book):
+    if not args:
+        raise Exception("Keyword required to search notes")
+
+    keyword = args[0].lower()
+    result = []
+    for note in book.notes:
+        if keyword in note.title.lower() or keyword in note.note.lower():
+            result.append({
+                "Title": note.title,
+                "Note": note.note,
+                "Tag": note.tag
+                })
+
+    if not result:
+        raise Exception("No matching notes found.")
+
+    return result
+
+
 def is_valid_email(email) -> bool:
     """Валідатор для email адреси."""
     pattern = r"^[\w\.-]+@[\w\.-]+\.\w{2,}$"
@@ -603,6 +702,8 @@ def greeting_message(commands_list):
 
 def main():
     commands_list = {
+        "exit": {"description": "Leave the app", "handler": None},
+        "close": {"description": "Leave the app", "handler": None},
         "hello": {
             "description": "Greeting message",
             "handler": lambda: "How can I help you?",
@@ -655,8 +756,26 @@ def main():
             "description": "Delete contact",
             "handler": lambda book: delete_contact(book),
         },
-        "exit": {"description": "Leave the app", "handler": None},
-        "close": {"description": "Leave the app", "handler": None},
+        "add-note": {
+            "description": "...Add description...",
+            "handler": lambda args: add_note(args, book),
+        },
+        "show-notes": {
+            "description": "...Add description...",
+            "handler": lambda args: show_notes(book),
+        },
+        "edit-note": {
+            "description": "...Add description...",
+            "handler": lambda args: edit_note(args, book),
+        },
+        "delete-note": {
+            "description": "...Add description...",
+            "handler": lambda args: delete_note(args, book),
+        },
+        "search-notes": {
+            "description": "...Add description...",
+            "handler": lambda args: search_notes(args, book),
+        },
     }
 
     goodbye_message = "Good bye!"
@@ -679,9 +798,8 @@ def main():
                 print("Invalid command.")
 
     except KeyboardInterrupt:
-        ...
-    finally:
         print("\nSaving data...")
+    finally:
         print(goodbye_message)
         save_data(book)
 
