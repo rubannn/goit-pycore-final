@@ -74,7 +74,10 @@ class TestNotes(unittest.TestCase):
         self.book = AddressBook()
 
     def test_add_note(self):
-        with patch("builtins.input", side_effect=["Todo", "Buy milk", "#personal"]):
+        with patch(
+                "builtins.input",
+                side_effect=["Todo", "Buy milk", "#personal"]
+        ):
             result = add_note([], self.book)
             self.assertEqual(result, "Note added.")
             self.assertEqual(len(self.book.notes), 1)
@@ -415,6 +418,17 @@ class TestFunctions(unittest.TestCase):
         )
         self.assertIn("Error:", result)
 
+    def test_is_valid_email_true(self):
+        self.assertTrue(is_valid_email(VALID_USER["email"]))
+
+    def test_is_valid_email_false(self):
+        self.assertFalse(is_valid_email(INVALID_USER["email"]))
+
+    def test_birthdays_none(self):
+        with patch("builtins.input", return_value="7"):
+            result = birthdays(self.book)
+            self.assertEqual(result, "No upcoming birthdays in 7 days")
+
     # def test_parse_input_valid(self):
     #     result = parse_input(
     #         f"add {ADDITIONAL_DATA['new_name']} {VALID_USER['phone']}"
@@ -427,17 +441,6 @@ class TestFunctions(unittest.TestCase):
     # def test_parse_input_invalid(self):
     #     result = parse_input("")
     #     self.assertIn("Error:", result)
-
-    def test_is_valid_email_true(self):
-        self.assertTrue(is_valid_email(VALID_USER["email"]))
-
-    def test_is_valid_email_false(self):
-        self.assertFalse(is_valid_email(INVALID_USER["email"]))
-
-    def test_birthdays_none(self):
-        with patch("builtins.input", return_value="7"):
-            result = birthdays(self.book)
-            self.assertEqual(result, "No upcoming birthdays in 7 days")
 
 
 if __name__ == '__main__':
