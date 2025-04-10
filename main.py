@@ -200,13 +200,25 @@ class AddressBook(UserDict):
                 return
         raise Exception("Note with this title not found")
 
-    def search_notes(self, keyword):
-        return [n for n in self.notes if keyword.lower() in n.title.lower() or (n.tag and keyword.lower() in n.tag.lower())]
+    def search_notes(args, book):
+        if not args:
+            return "Keyword required to search notes"
+        keyword = args[0]
+        return [n for n in book.notes if
+                keyword.lower() in n.title.lower() or (n.tag and keyword.lower() in n.tag.lower())]
 
     def add_record(self, record):
         """Додавання записів"""
         self.data[record.name.value] = record
 
+    def find(self, name) -> Record:
+        """Пошук записів за іменем"""
+        return self.data.get(name, None)
+
+    def delete(self, name):
+        """Видалення записів за іменем"""
+        if name in self.data:
+            del self.data[name]
 
     def get_upcoming_birthdays(self):
         days_count = 300
@@ -444,12 +456,16 @@ def edit_note(args, book):
     book.edit_note(title, new_text, tag)
     return "Note updated."
 
-@as_table("Search Notes")
-@input_error
+
 def search_notes(args, book):
     if not args:
-        raise Exception("Enter keyword to search notes")
-    return book.search_notes(args[0])
+        return "Keyword required to search notes"
+    keyword = args[0].lower()
+    results = []
+    for note in book.notes:
+        if keyword in note.title.lower() or keyword in note.body.lower():
+            results.append(note)
+    return results
 
 
 def is_valid_email(email) -> bool:
@@ -478,7 +494,7 @@ def main():
         "add": lambda args: add_contact(args, book),
         "change": lambda args: change_contact(args, book),
         "phone": lambda args: show_phone(args, book),
-        "all": lambda args: (show_all(book), show_notes(book)),
+        "all": lambda args: (show_all(book)),
         "add-birthday": lambda args: add_birthday(args, book),
         "show-birthday": lambda args: show_birthday(args, book),
         "birthdays": lambda args: birthdays(book),
