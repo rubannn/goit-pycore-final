@@ -644,7 +644,7 @@ def delete_contact(book: AddressBook):
     return book.delete(name)
 
 
-@as_table(title="Sort Notes by Tags Result")
+@as_table(title="Search Tags Result")
 def search_tags(book: AddressBook):
     value = input("Please pass a value for tag search: ").strip()
 
@@ -656,7 +656,7 @@ def search_tags(book: AddressBook):
         return result
     return "Tag not found."
 
-@as_table(title="Search Tags Result")
+@as_table(title="Sort Notes by Tags Result")
 def sort_tags(book: AddressBook):
     return (
         sorted(book.notes, key=lambda x: (x.tag is None, x.tag or ""))
