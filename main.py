@@ -670,7 +670,6 @@ def main():
                 command = command.lower().split()[0]
 
             if command in ["close", "exit"]:
-                print(goodbye_message)
                 break
 
             elif command in commands_list:
@@ -680,9 +679,9 @@ def main():
                 print("Invalid command.")
 
     except KeyboardInterrupt:
-        print("\nSaving data...")
-
+        ...
     finally:
+        print("\nSaving data...")
         print(goodbye_message)
         save_data(book)
 
