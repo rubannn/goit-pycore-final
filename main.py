@@ -774,23 +774,23 @@ def main():
             "handler": lambda book: delete_contact(book),
         },
         "add-note": {
-            "description": "...Add description...",
+            "description": "Add new note",
             "handler": lambda args: add_note(args, book),
         },
         "show-notes": {
-            "description": "...Add description...",
+            "description": "Show all existing notes",
             "handler": lambda args: show_notes(book),
         },
         "edit-note": {
-            "description": "...Add description...",
+            "description": "Edit an existing note",
             "handler": lambda args: edit_note(args, book),
         },
         "delete-note": {
-            "description": "...Add description...",
+            "description": "Delete specific note",
             "handler": lambda args: delete_note(args, book),
         },
         "search-notes": {
-            "description": "...Add description...",
+            "description": "Search note",
             "handler": lambda args: search_notes(args, book),
         },
     }
