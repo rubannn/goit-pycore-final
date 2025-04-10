@@ -644,6 +644,27 @@ def delete_contact(book: AddressBook):
     return book.delete(name)
 
 
+@as_table(title="Sort Notes by Tags Result")
+def search_tags(book: AddressBook):
+    value = input("Please pass a value for tag search: ").strip()
+
+    result = []
+    for note in book.notes:
+        if note.tag and note.tag.lower() == value.lower():
+            result.append({"Title": note.title, "Note": note.note, "Tag": note.tag})
+    if result:
+        return result
+    return "Tag not found."
+
+@as_table(title="Search Tags Result")
+def sort_tags(book: AddressBook):
+    return (
+        sorted(book.notes, key=lambda x: (x.tag is None, x.tag or ""))
+        if book.notes
+        else "No notes found."
+    )
+
+
 def get_data_path(filename="addressbook.pkl") -> str:
     """
     Get the full file path to the data file in the project directory.
@@ -792,6 +813,18 @@ def main():
         "search-notes": {
             "description": "...Add description...",
             "handler": lambda args: search_notes(args, book),
+        },
+        "search-tags": {
+            "description": "Find notes by tag",
+            "handler": lambda book: search_tags(book),
+        },
+        "sort-tags": {
+            "description": "Sort notes by tag",
+            "handler": lambda book: sort_tags(book),
+        },
+        "help": {
+            "description": "Full list of commands",
+            "handler": lambda _: greeting_message(commands_list),
         },
     }
 
