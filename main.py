@@ -12,6 +12,7 @@ from colorama import init, Fore, Style
 from rich.console import Console
 from rich.table import Table
 from functools import wraps
+from difflib import SequenceMatcher
 
 
 COLORS = ["cyan", "magenta", "green", "yellow", "blue", "bright_red", "white"]
@@ -57,7 +58,6 @@ def as_table(title="Table"):
             for item in result:
                 if isinstance(item, dict) and item.get("end-section"):
                     end_section = True
-
 
                 row = []
                 for h in headers:
@@ -747,6 +747,23 @@ def greeting_message(commands_list):
     ]
 
 
+@as_table(title="List of Similar Commands")
+def predict_command(commands_list, ratio, candidate=None):
+    """Predicts the command based on the input."""
+
+    def similarity_ratio(s1, s2):
+        """returns the percentage similarity between two strings"""
+        return SequenceMatcher(None, s1, s2).ratio() * 100
+
+    candidate_list = []
+    if candidate:
+        for command in commands_list:
+            if similarity_ratio(candidate, command) > ratio:
+                candidate_list.append({"similar commands": command})
+
+    return candidate_list if candidate_list else "No similar commands found."
+
+
 def main():
     commands_list = {
         "add": {
@@ -828,7 +845,7 @@ def main():
             "handler": lambda book: sort_tags(book),
             "end-section": True,
         },
-                "exit": {"description": "Leave the app", "handler": None},
+        "exit": {"description": "Leave the app", "handler": None},
         "close": {"description": "Leave the app", "handler": None},
         "hello": {
             "description": "Greeting message",
@@ -857,6 +874,7 @@ def main():
                 print(commands_list[command]["handler"](book))
 
             else:
+                predict_command(commands_list, 50, command)
                 print("Invalid command.")
 
     except KeyboardInterrupt:
