@@ -864,7 +864,7 @@ def main():
         "close": {"description": "Leave the app", "handler": None},
         "hello": {
             "description": "Greeting message",
-            "handler": lambda: "How can I help you?",
+            "handler": lambda book: "How can I help you?",
         },
         "help": {
             "description": "Full list of commands",
