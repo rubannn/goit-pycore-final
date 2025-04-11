@@ -12,7 +12,8 @@ from main import (
     add_birthday, show_birthday, birthdays,
     add_email, add_address, is_valid_email, load_data, save_data,
     get_data_path, greeting_message, predict_command, Note, sort_tags,
-    search_tags, search_notes, delete_note, edit_note, add_note
+    search_tags, search_notes, delete_note, edit_note, add_note, add_phone,
+    delete_contact, find_contact, show_all, show_notes
 )
 
 # User data constants
@@ -72,6 +73,11 @@ class TestFieldClasses(unittest.TestCase):
 class TestNotes(unittest.TestCase):
     def setUp(self):
         self.book = AddressBook()
+
+    def test_show_notes_output(self):
+        self.book.add_note(Note("Note1", "Some content"))
+        result = show_notes(self.book)
+        self.assertEqual(result, "")
 
     def test_add_note(self):
         with patch(
@@ -164,6 +170,10 @@ class TestSaveLoad(unittest.TestCase):
     def tearDown(self):
         if os.path.isfile(self.data_path):
             os.remove(self.data_path)
+
+    def test_get_data_path_folder_created(self):
+        path = get_data_path("temp_test_file.pkl")
+        self.assertTrue(os.path.exists(os.path.dirname(path)))
 
     def test_save_data_creates_file(self):
         save_data(self.book, self.filename)
@@ -302,6 +312,57 @@ class TestFunctions(unittest.TestCase):
         rec = Record(VALID_USER["name"])
         rec.add_phone(VALID_USER["phone"])
         self.book.add_record(rec)
+
+    def test_delete_contact_valid(self):
+        self.book.add_record(Record("Temp"))
+        with patch("builtins.input", return_value="Temp"):
+            result = delete_contact(self.book)
+        self.assertEqual(result, "Contact deleted")
+
+    def test_find_contact_found(self):
+        with patch("builtins.input", return_value=VALID_USER["phone"]):
+            result = find_contact(self.book)
+        self.assertEqual(result, "")
+
+    def test_find_contact_not_found(self):
+        with patch("builtins.input", return_value="NoMatch"):
+            result = find_contact(self.book)
+        self.assertEqual(result, "Contact not found.")
+
+    def test_delete_contact_invalid(self):
+        with patch("builtins.input", return_value="Ghost"):
+            result = delete_contact(self.book)
+        self.assertIn("Error:", result)
+
+    def test_show_all_contacts(self):
+        result = show_all(self.book)
+        self.assertEqual(result, "")
+
+    def test_add_phone_valid(self):
+        self.book.add_record(Record(ADDITIONAL_DATA["new_name"]))
+        with patch("builtins.input", side_effect=[
+            ADDITIONAL_DATA["new_name"],
+            ADDITIONAL_DATA["new_phone"]
+        ]):
+            result = add_phone(self.book)
+            self.assertEqual(result, "Contact updated.")
+            self.assertEqual(
+                self.book[ADDITIONAL_DATA["new_name"]].phones[0].value,
+                ADDITIONAL_DATA["new_phone"]
+            )
+
+    def test_add_phone_invalid_then_exit(self):
+        self.book.add_record(Record(ADDITIONAL_DATA["new_name"]))
+        with patch("builtins.input", side_effect=[
+            ADDITIONAL_DATA["new_name"],
+            "123",
+            "exit"
+        ]):
+            result = add_phone(self.book)
+            self.assertEqual(result, "Operation cancelled.")
+            self.assertEqual(
+                len(self.book[ADDITIONAL_DATA["new_name"]].phones), 0
+            )
 
     def test_add_contact_valid(self):
         with patch("builtins.input", side_effect=[
