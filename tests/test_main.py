@@ -4,13 +4,16 @@ import tempfile
 import unittest
 from datetime import datetime
 from unittest import mock
+from unittest.mock import patch
 
 from main import (
     AddressBook, Record, Name, Phone, Birthday,
     add_contact, change_contact, show_phone,
     add_birthday, show_birthday, birthdays,
-    add_email, add_address, parse_input, is_valid_email, load_data, save_data,
-    get_data_path
+    add_email, add_address, is_valid_email, load_data, save_data,
+    get_data_path, greeting_message, predict_command, Note, sort_tags,
+    search_tags, search_notes, delete_note, edit_note, add_note, add_phone,
+    delete_contact, find_contact, show_all, show_notes
 )
 
 # User data constants
@@ -67,6 +70,91 @@ class TestFieldClasses(unittest.TestCase):
             Birthday(INVALID_USER["birthday"])
 
 
+class TestNotes(unittest.TestCase):
+    def setUp(self):
+        self.book = AddressBook()
+
+    def test_show_notes_output(self):
+        self.book.add_note(Note("Note1", "Some content"))
+        result = show_notes(self.book)
+        self.assertEqual(result, "")
+
+    def test_add_note(self):
+        with patch(
+                "builtins.input",
+                side_effect=["Todo", "Buy milk", "#personal"]
+        ):
+            result = add_note([], self.book)
+            self.assertEqual(result, "Note added.")
+            self.assertEqual(len(self.book.notes), 1)
+
+    def test_add_note_without_tag(self):
+        with patch("builtins.input", side_effect=["Work", "Finish report", ""]):
+            result = add_note([], self.book)
+            self.assertEqual(result, "Note added.")
+            self.assertEqual(self.book.notes[0].tag, "")
+
+    def test_edit_note_text_and_tag(self):
+        self.book.add_note(Note("Plan", "Initial text", "#old"))
+        result = edit_note(["Plan", "Updated content", "#new"], self.book)
+        self.assertEqual(result, "Note updated.")
+        self.assertEqual(self.book.notes[0].note, "Updated content")
+        self.assertEqual(self.book.notes[0].tag, "#new")
+
+    def test_delete_note(self):
+        self.book.add_note(Note("Shopping", "Eggs and milk"))
+        result = delete_note(["Shopping"], self.book)
+        self.assertEqual(result, "Note deleted.")
+        self.assertEqual(len(self.book.notes), 0)
+
+    def test_search_notes_by_title(self):
+        self.book.add_note(Note("Trip", "Pack luggage", "#travel"))
+        with patch("builtins.input", return_value="Trip"):
+            result = search_notes(["Trip"], self.book)
+        self.assertEqual(result, "")
+
+    def test_search_notes_no_result(self):
+        self.book.notes = []
+        result = search_notes(["Unknown"], self.book)
+        self.assertIn("Error:", result)
+
+    def test_search_tags_found(self):
+        self.book.add_note(Note("Meeting", "Discuss agenda", "#work"))
+        with patch("builtins.input", return_value="#work"):
+            result = search_tags(self.book)
+        self.assertEqual(result, "")
+
+    def test_sort_tags(self):
+        self.book.add_note(Note("B", "content", "#beta"))
+        self.book.add_note(Note("A", "content", "#alpha"))
+        self.book.add_note(Note("None", "no tag"))
+        result = sort_tags(self.book)
+        self.assertEqual(result, "")
+
+
+class TestUtils(unittest.TestCase):
+    def test_predict_command_found(self):
+        commands = {
+            "add": {"description": "Add contact"},
+            "delete": {"description": "Delete contact"},
+        }
+        result = predict_command(commands, 50, candidate="adde")
+        self.assertEqual(result, "")
+
+    def test_predict_command_not_found(self):
+        commands = {"add": {}, "show": {}}
+        result = predict_command(commands, 90, candidate="xyz")
+        self.assertEqual(result, "")
+
+    def test_greeting_message_output(self):
+        commands = {
+            "add": {"description": "Add contact"},
+            "delete": {"description": "Delete contact", "end-section": True},
+        }
+        result = greeting_message(commands)
+        self.assertEqual(result, "")
+
+
 class TestSaveLoad(unittest.TestCase):
     def setUp(self):
         self.book = AddressBook()
@@ -82,6 +170,10 @@ class TestSaveLoad(unittest.TestCase):
     def tearDown(self):
         if os.path.isfile(self.data_path):
             os.remove(self.data_path)
+
+    def test_get_data_path_folder_created(self):
+        path = get_data_path("temp_test_file.pkl")
+        self.assertTrue(os.path.exists(os.path.dirname(path)))
 
     def test_save_data_creates_file(self):
         save_data(self.book, self.filename)
@@ -210,7 +302,7 @@ class TestAddressBook(unittest.TestCase):
         self.assertNotIn(VALID_USER["name"], self.book)
 
     def test_get_upcoming_birthdays(self):
-        result = self.book.get_upcoming_birthdays()
+        result = self.book.get_upcoming_birthdays(7)
         self.assertIsInstance(result, list)
 
 
@@ -221,13 +313,68 @@ class TestFunctions(unittest.TestCase):
         rec.add_phone(VALID_USER["phone"])
         self.book.add_record(rec)
 
+    def test_delete_contact_valid(self):
+        self.book.add_record(Record("Temp"))
+        with patch("builtins.input", return_value="Temp"):
+            result = delete_contact(self.book)
+        self.assertEqual(result, "Contact deleted")
+
+    def test_find_contact_found(self):
+        with patch("builtins.input", return_value=VALID_USER["phone"]):
+            result = find_contact(self.book)
+        self.assertEqual(result, "")
+
+    def test_find_contact_not_found(self):
+        with patch("builtins.input", return_value="NoMatch"):
+            result = find_contact(self.book)
+        self.assertEqual(result, "Contact not found.")
+
+    def test_delete_contact_invalid(self):
+        with patch("builtins.input", return_value="Ghost"):
+            result = delete_contact(self.book)
+        self.assertIn("Error:", result)
+
+    def test_show_all_contacts(self):
+        result = show_all(self.book)
+        self.assertEqual(result, "")
+
+    def test_add_phone_valid(self):
+        self.book.add_record(Record(ADDITIONAL_DATA["new_name"]))
+        with patch("builtins.input", side_effect=[
+            ADDITIONAL_DATA["new_name"],
+            ADDITIONAL_DATA["new_phone"]
+        ]):
+            result = add_phone(self.book)
+            self.assertEqual(result, "Contact updated.")
+            self.assertEqual(
+                self.book[ADDITIONAL_DATA["new_name"]].phones[0].value,
+                ADDITIONAL_DATA["new_phone"]
+            )
+
+    def test_add_phone_invalid_then_exit(self):
+        self.book.add_record(Record(ADDITIONAL_DATA["new_name"]))
+        with patch("builtins.input", side_effect=[
+            ADDITIONAL_DATA["new_name"],
+            "123",
+            "exit"
+        ]):
+            result = add_phone(self.book)
+            self.assertEqual(result, "Operation cancelled.")
+            self.assertEqual(
+                len(self.book[ADDITIONAL_DATA["new_name"]].phones), 0
+            )
+
     def test_add_contact_valid(self):
-        result = add_contact(
-            [ADDITIONAL_DATA["new_name"], "0987654321"],
-            self.book
-        )
-        self.assertIn(ADDITIONAL_DATA["new_name"], self.book)
-        self.assertEqual(result, "Contact added.")
+        with patch("builtins.input", side_effect=[
+            ADDITIONAL_DATA["new_name"],
+            "0987654321",
+            "",
+            "",
+            ""
+        ]):
+            result = add_contact(self.book)
+            self.assertIn(ADDITIONAL_DATA["new_name"], self.book)
+            self.assertEqual(result, "Contact added.")
 
     def test_add_contact_invalid(self):
         result = add_contact(["OnlyName"], self.book)
@@ -235,16 +382,19 @@ class TestFunctions(unittest.TestCase):
 
     def test_change_contact_valid(self):
         self.book[VALID_USER["name"]].add_phone(ADDITIONAL_DATA["extra_phone"])
-        change_contact(
-            [
-                VALID_USER["name"],
-                VALID_USER["phone"],
-                ADDITIONAL_DATA["replaced_phone"]
-            ],
-            self.book
-        )
+        with patch("builtins.input", side_effect=[
+            VALID_USER["name"],
+            "phones",
+            f"{VALID_USER['phone']} {ADDITIONAL_DATA['replaced_phone']}"
+        ]):
+            change_contact(self.book)
+
         self.assertNotIn(
             VALID_USER["phone"],
+            [p.value for p in self.book[VALID_USER["name"]].phones]
+        )
+        self.assertIn(
+            ADDITIONAL_DATA["replaced_phone"],
             [p.value for p in self.book[VALID_USER["name"]].phones]
         )
 
@@ -256,7 +406,8 @@ class TestFunctions(unittest.TestCase):
         self.assertIn("Error:", result)
 
     def test_show_phone_valid(self):
-        result = show_phone([VALID_USER["name"]], self.book)
+        with patch("builtins.input", return_value=VALID_USER["name"]):
+            result = show_phone(self.book)
         self.assertEqual(result, "")
 
     def test_show_phone_invalid(self):
@@ -264,11 +415,14 @@ class TestFunctions(unittest.TestCase):
         self.assertIn("Error:", result)
 
     def test_add_birthday_valid(self):
-        result = add_birthday(
-            [VALID_USER["name"], ADDITIONAL_DATA["new_birthday"]],
-            self.book
-        )
-        self.assertIn("Birthday added", result)
+        with patch(
+                "builtins.input",
+                side_effect=[
+                    VALID_USER["name"],
+                    ADDITIONAL_DATA["new_birthday"]
+                ]):
+            result = add_birthday(self.book)
+            self.assertIn("Contact updated", result)
 
     def test_add_birthday_invalid(self):
         result = add_birthday(
@@ -282,7 +436,8 @@ class TestFunctions(unittest.TestCase):
 
     def test_show_birthday_valid(self):
         self.book[VALID_USER["name"]].add_birthday(VALID_USER["birthday"])
-        result = show_birthday([VALID_USER["name"]], self.book)
+        with patch("builtins.input", return_value=VALID_USER["name"]):
+            result = show_birthday(self.book)
         self.assertEqual(result, "")
 
     def test_show_birthday_invalid(self):
@@ -290,11 +445,10 @@ class TestFunctions(unittest.TestCase):
         self.assertIn("Error:", result)
 
     def test_add_address_valid(self):
-        result = add_address(
-            [VALID_USER["name"], VALID_USER["address"]],
-            self.book
-        )
-        self.assertIn("Address added", result)
+        with patch("builtins.input",
+                   side_effect=[VALID_USER["name"], VALID_USER["address"]]):
+            result = add_address(self.book)
+            self.assertIn("Address added", result)
 
     def test_add_address_invalid(self):
         result = add_address(
@@ -304,11 +458,12 @@ class TestFunctions(unittest.TestCase):
         self.assertIn("Error:", result)
 
     def test_add_email_valid(self):
-        result = add_email(
-            [VALID_USER["name"], VALID_USER["email"]],
-            self.book
-        )
-        self.assertEqual(result, "Email added.")
+        with patch("builtins.input", side_effect=[
+            VALID_USER["name"],
+            VALID_USER["email"]
+        ]):
+            result = add_email(self.book)
+            self.assertEqual(result, "Email added.")
 
     def test_add_email_invalid_format(self):
         result = add_email(
@@ -324,19 +479,6 @@ class TestFunctions(unittest.TestCase):
         )
         self.assertIn("Error:", result)
 
-    def test_parse_input_valid(self):
-        result = parse_input(
-            f"add {ADDITIONAL_DATA['new_name']} {VALID_USER['phone']}"
-        )
-        self.assertEqual(
-            result,
-            ("add", ADDITIONAL_DATA["new_name"], VALID_USER["phone"])
-        )
-
-    def test_parse_input_invalid(self):
-        result = parse_input("")
-        self.assertIn("Error:", result)
-
     def test_is_valid_email_true(self):
         self.assertTrue(is_valid_email(VALID_USER["email"]))
 
@@ -344,8 +486,22 @@ class TestFunctions(unittest.TestCase):
         self.assertFalse(is_valid_email(INVALID_USER["email"]))
 
     def test_birthdays_none(self):
-        result = birthdays(self.book)
-        self.assertEqual(result, "No upcoming birthdays.")
+        with patch("builtins.input", return_value="7"):
+            result = birthdays(self.book)
+            self.assertEqual(result, "No upcoming birthdays in 7 days")
+
+    # def test_parse_input_valid(self):
+    #     result = parse_input(
+    #         f"add {ADDITIONAL_DATA['new_name']} {VALID_USER['phone']}"
+    #     )
+    #     self.assertEqual(
+    #         result,
+    #         ("add", ADDITIONAL_DATA["new_name"], VALID_USER["phone"])
+    #     )
+    #
+    # def test_parse_input_invalid(self):
+    #     result = parse_input("")
+    #     self.assertIn("Error:", result)
 
 
 if __name__ == '__main__':
