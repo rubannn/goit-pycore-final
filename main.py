@@ -530,7 +530,7 @@ def show_notes(book):
 
 
 @input_error
-def add_note(args, book):
+def add_note(book):
     title = input("Please type a title for the note: ").strip()
     while len(title) < 1:
         title = input(
@@ -558,48 +558,94 @@ def add_note(args, book):
 
     return "Note added."
 
-@input_error
-def delete_note(args, book):
-    if not args:
-        raise Exception("Provide note title to delete")
-    title = args[0]
-    book.delete_note(title)
-    return "Note deleted."
-
 
 @input_error
-def edit_note(args, book):
-    if len(args) < 2:
-        raise Exception("Use: edit-note title new_text [#tag]")
-    title, *note = args
-    tag = None
-    if note[-1].startswith("#"):
-        tag = note.pop()
-    new_text = " ".join(note)
-    book.edit_note(title, new_text, tag)
-    return "Note updated."
+def delete_note(book):
+    method = input("Delete by 'title' or by 'tag'? ").strip().lower()
+
+    if method == "title":
+        title = input("Please type the title of the note to delete: ").strip()
+        deleted = [note for note in book.notes if note.title.lower() == title.lower()]
+        if not deleted:
+            raise Exception(f"No notes found with title '{title}'")
+        for note in deleted:
+            book.notes.remove(note)
+        return f"Deleted {len(deleted)} note(s) with title '{title}'"
+
+    elif method == "tag":
+        tag = input("Please type the tag of the notes to delete (include #): ").strip()
+        deleted = [note for note in book.notes if note.tag and note.tag.lower() == tag.lower()]
+        if not deleted:
+            raise Exception(f"No notes found with tag '{tag}'")
+        for note in deleted:
+            book.notes.remove(note)
+        return f"Deleted {len(deleted)} note(s) with tag '{tag}'"
+
+    else:
+        raise Exception("Invalid option. Choose 'title' or 'tag'.")
 
 
-@as_table(title="Found Notes:")
 @input_error
-def search_notes(args, book):
-    if not args:
-        raise Exception("Keyword required to search notes")
+def edit_note(book):
+    """Редактирует существующую заметку по названию (title)."""
 
-    keyword = args[0].lower()
-    result = []
-    for note in book.notes:
-        if keyword in note.title.lower() or keyword in note.note.lower():
-            result.append({
+    title = input("Please type the title of the note to edit: ").strip()
+    note = next((n for n in book.notes if n.title.lower() == title.lower()), None)
+
+    if not note:
+        raise Exception(ERROR + f"Note with title '{title}' not found.")
+
+    note_fields = ["note", "tag"]
+    input_message = f"Which field would you like to change? Choose from {note_fields} or type 'exit': "
+    key = input(input_message).strip()
+    while key not in note_fields:
+        if key == "exit":
+            return "Operation cancelled"
+        key = input(input_message).strip()
+
+    commands = {
+        "note": {
+            "prompt": "Enter new text for the note: ",
+            "action": lambda data: setattr(note, "note", data),
+        },
+        "tag": {
+            "prompt": "Enter new tag (start with #) or leave blank to remove tag: ",
+            "action": lambda data: setattr(note, "tag", data if data.startswith("#") else None),
+        },
+    }
+
+    user_input = input(commands[key]["prompt"])
+    commands[key]["action"](user_input)
+    return f"Note '{title}' updated successfully."
+
+
+
+
+@as_table(title="Found Notes")
+@input_error
+def search_note(book):
+    keyword = input("Please enter a keyword to search notes: ").strip().lower()
+
+    if not keyword:
+        raise Exception("Keyword is required for note search.")
+
+    matches = []
+    for note in book.get_notes():
+        if (keyword in note.title.lower()
+            or keyword in note.note.lower()
+            or (note.tag and keyword in note.tag.lower())):
+            matches.append({
                 "Title": note.title,
                 "Note": note.note,
-                "Tag": note.tag
-                })
+                "Tag": note.tag or "---"
+            })
 
-    if not result:
-        raise Exception("No matching notes found.")
+    if not matches:
+        raise Exception(f"No notes found matching '{keyword}'.")
 
-    return result
+    return matches
+
+
 
 
 def is_valid_email(email) -> bool:
@@ -775,24 +821,25 @@ def main():
         },
         "add-note": {
             "description": "Add new note",
-            "handler": lambda args: add_note(args, book),
-        },
-        "show-notes": {
-            "description": "Show all existing notes",
-            "handler": lambda args: show_notes(book),
+            "handler": lambda book: add_note(book),
         },
         "edit-note": {
             "description": "Edit an existing note",
-            "handler": lambda args: edit_note(args, book),
+            "handler": lambda book: edit_note(book),
         },
         "delete-note": {
             "description": "Delete specific note",
-            "handler": lambda args: delete_note(args, book),
+            "handler": lambda book: delete_note(book),
+        },
+        "show-notes": {
+            "description": "Show all existing notes",
+            "handler": lambda book: show_notes(book),
         },
         "search-notes": {
-            "description": "Search note",
-            "handler": lambda args: search_notes(args, book),
+            "description": "Search notes by keyword",
+            "handler": lambda book: search_note(book),
         },
+
     }
 
     goodbye_message = "Good bye!"
