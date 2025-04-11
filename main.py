@@ -622,7 +622,7 @@ def is_valid_email(email) -> bool:
     pattern = r"^[\w\.-]+@[\w\.-]+\.\w{2,}$"
     return re.match(pattern, email) is not None
 
-
+@input_error
 def add_phone(book: AddressBook):
     name = input("Please type a name: ")
     record: Record = book.find(name)
@@ -864,7 +864,7 @@ def main():
         "close": {"description": "Leave the app", "handler": None},
         "hello": {
             "description": "Greeting message",
-            "handler": lambda book: "How can I help you?",
+            "handler": lambda _: "How can I help you?",
         },
         "help": {
             "description": "Full list of commands",
