@@ -12,8 +12,8 @@ from main import (
     add_birthday, show_birthday, birthdays,
     add_email, add_address, is_valid_email, load_data, save_data,
     get_data_path, greeting_message, predict_command, Note, sort_tags,
-    search_tags, search_notes, delete_note, edit_note, add_note, add_phone,
-    delete_contact, find_contact, show_all, show_notes
+    search_tags, delete_note, edit_note, add_note, add_phone,
+    delete_contact, find_contact, show_all, show_notes, search_note
 )
 
 # User data constants
@@ -84,38 +84,57 @@ class TestNotes(unittest.TestCase):
                 "builtins.input",
                 side_effect=["Todo", "Buy milk", "#personal"]
         ):
-            result = add_note([], self.book)
+            result = add_note(self.book)
             self.assertEqual(result, "Note added.")
             self.assertEqual(len(self.book.notes), 1)
 
     def test_add_note_without_tag(self):
-        with patch("builtins.input", side_effect=["Work", "Finish report", ""]):
-            result = add_note([], self.book)
+        with patch(
+                "builtins.input",
+                side_effect=["Work", "Finish report", ""]
+        ):
+            result = add_note(self.book)
             self.assertEqual(result, "Note added.")
             self.assertEqual(self.book.notes[0].tag, "")
 
-    def test_edit_note_text_and_tag(self):
+    def test_edit_note_text(self):
         self.book.add_note(Note("Plan", "Initial text", "#old"))
-        result = edit_note(["Plan", "Updated content", "#new"], self.book)
-        self.assertEqual(result, "Note updated.")
+        with patch(
+                "builtins.input",
+                side_effect=["Plan", "note", "Updated content"]
+        ):
+            result = edit_note(self.book)
+        self.assertIn("updated", result.lower())
         self.assertEqual(self.book.notes[0].note, "Updated content")
+        self.assertEqual(self.book.notes[0].tag, "#old")
+
+    def test_edit_note_tag(self):
+        self.book.add_note(Note("Plan", "Some text", "#old"))
+        with patch(
+                "builtins.input",
+                side_effect=["Plan", "tag", "#new"]
+        ):
+            result = edit_note(self.book)
+        self.assertIn("updated", result.lower())
+        self.assertEqual(self.book.notes[0].note,"Some text")
         self.assertEqual(self.book.notes[0].tag, "#new")
 
     def test_delete_note(self):
         self.book.add_note(Note("Shopping", "Eggs and milk"))
-        result = delete_note(["Shopping"], self.book)
-        self.assertEqual(result, "Note deleted.")
+        with patch("builtins.input", side_effect=["title", "Shopping"]):
+            result = delete_note(self.book)
+        self.assertIn("Deleted", result)
         self.assertEqual(len(self.book.notes), 0)
 
     def test_search_notes_by_title(self):
         self.book.add_note(Note("Trip", "Pack luggage", "#travel"))
         with patch("builtins.input", return_value="Trip"):
-            result = search_notes(["Trip"], self.book)
+            result = search_note(self.book)
         self.assertEqual(result, "")
 
     def test_search_notes_no_result(self):
         self.book.notes = []
-        result = search_notes(["Unknown"], self.book)
+        result = search_note(["Unknown"], self.book)
         self.assertIn("Error:", result)
 
     def test_search_tags_found(self):
@@ -359,7 +378,7 @@ class TestFunctions(unittest.TestCase):
             "exit"
         ]):
             result = add_phone(self.book)
-            self.assertEqual(result, "Operation cancelled.")
+            self.assertIn("Incorrect phone format", result)
             self.assertEqual(
                 len(self.book[ADDITIONAL_DATA["new_name"]].phones), 0
             )
