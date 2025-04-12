@@ -93,6 +93,10 @@ The application provides clear error messages for:
 - Invalid date formats
 - Missing contacts
 
+## Running Unit Tests
+- Ensure to follow Installation section for setup
+- Execute the following command from the project directory: ```python -m unittest discover -s tests```
+
 ## License
 
 This project is licensed under the MIT License.
