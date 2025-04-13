@@ -136,8 +136,12 @@ class Phone(Field):
         super().__init__(value)
 
     def __str__(self):
-        """Повертає рядкове представлення значення."""
-        return self.value
+        """Повертає номер телефону у форматі (###) ###-#-###."""
+        match = re.fullmatch(r"(\d{3})(\d{2})(\d{2})(\d{3})", self.value)
+        return (
+            f"({match.group(1)}) {match.group(2)}-" +
+            f"{match.group(3)}-{match.group(4)}"
+        )
 
 
 class Birthday(Field):
@@ -967,7 +971,7 @@ def main():
         },
         "generate-data": {
             "description": "Generate fake data for testing",
-            "handler": lambda book: fill_with_fake_data(book),
+            "handler": lambda book: show_all(fill_with_fake_data(book)),
             "end-section": True,
         },
         "exit": {"description": "Leave the app", "handler": None},

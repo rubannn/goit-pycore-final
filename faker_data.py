@@ -39,14 +39,20 @@ def generate_fake_notes(book: AddressBook, num_notes=5):
     tags = ["#work", "#personal", "#family", "#friends", "#todo", None]
     for _ in range(num_notes):
         title = fake.sentence(nb_words=3)[:-1]  # Прибираємо крапку в кінці
-        text = fake.paragraph(nb_sentences=3)
+        text = fake.paragraph(nb_sentences=2)
         tag = random.choice(tags)
         book.add_note(Note(title, text, tag))
 
 
-def fill_with_fake_data(book: AddressBook, num_contacts=10, num_notes=5):
-    """Заповнює AddressBook фейковими даними."""
+def fill_with_fake_data(book: AddressBook, num_contacts=15, num_notes=5):
+    """Заповнює AddressBook фейковими даними
+    (попередньо очищаємо видаляємо старі записи книги)."""
+    print("Clearing the contact book...")
+    book.data.clear()
+    book.notes.clear()
+
     print("Generating fake data...")
     generate_fake_contacts(book, num_contacts)
     generate_fake_notes(book, num_notes)
-    return f"Generated {num_contacts} contacts and {num_notes} notes."
+    print(f"Generated {num_contacts} contacts and {num_notes} notes.")
+    return book
