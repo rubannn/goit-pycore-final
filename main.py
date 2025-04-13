@@ -882,6 +882,8 @@ def predict_command(commands_list, ratio, candidate=None):
 
 def main():
     """Запускає основну логіку застосунку."""
+    from faker_data import fill_with_fake_data
+
     commands_list = {
         "add": {
             "description": "Add new contact",
@@ -961,6 +963,11 @@ def main():
         "sort-tags": {
             "description": "Sort notes by tag",
             "handler": lambda book: sort_tags(book),
+            "end-section": True,
+        },
+        "generate-data": {
+            "description": "Generate fake data for testing",
+            "handler": lambda book: fill_with_fake_data(book),
             "end-section": True,
         },
         "exit": {"description": "Leave the app", "handler": None},
