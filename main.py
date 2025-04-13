@@ -37,18 +37,18 @@ def as_table(title="Table"):
         @wraps(func)
         def wrapper(*args, **kwargs):
             result = func(*args, **kwargs)
-            # Проверка: если это не список или пустой список — вернём как есть
+            # Провірка: якщо це не список або пустий список — повертаємо без зімн
             if not isinstance(result, list) or not result:
                 return result
 
-            # Берём первое значение для определения полей
+            # обираємо перший запис для визначення назв полів
             first = result[0]
             if hasattr(first, "__dict__"):
                 headers = list(first.__dict__.keys())
             elif isinstance(first, dict):
                 headers = list(first.keys())
             else:
-                return result  # не поддерживаемые типы
+                return result
 
             headers = [h for h in headers if h != "end-section"]
             console = Console()
@@ -93,7 +93,7 @@ def as_table(title="Table"):
                 end_section = False
 
             console.print(table)
-            return ""  # для предотвращения повторного вывода
+            return ""  # запобігання повторного виводу
 
         return wrapper
 
@@ -287,33 +287,6 @@ class AddressBook(UserDict):
         """Повертає список усіх нотаток."""
         return self.notes
 
-    # def delete_note(self, title):
-    #     """Видаляє нотатку за назвою."""
-    #     self.notes = [n for n in self.notes if n.title != title]
-
-    # def edit_note(self, title, new_text=None, new_tag=None):
-    #     """Редагує вміст нотатки за її назвою."""
-    #     for note in self.notes:
-    #         if note.title == title:
-    #             if new_text:
-    #                 note.note = new_text
-    #             if new_tag:
-    #                 note.tag = new_tag
-    #             return
-    #     raise Exception("Note with this title not found")
-
-    # def search_notes(args, book):
-    #     """Пошук нотаток за ключовим словом у заголовку або тегу."""
-    #     if not args:
-    #         return "Keyword required to search notes"
-    #     keyword = args[0]
-    #     return [
-    #         n
-    #         for n in book.notes
-    #         if keyword.lower() in n.title.lower()
-    #         or (n.tag and keyword.lower() in n.tag.lower())
-    #     ]
-
     def add_record(self, record: Record):
         """Додає запис до адресної книги."""
         self.data[record.name.value] = record
@@ -326,10 +299,6 @@ class AddressBook(UserDict):
     def add_notes(self, note):
         """Додає нотатку як запис."""
         self.data[note.tite] = note
-
-    # def find(self, name) -> Record:
-    #     """Пошук записів за іменем"""
-    #     return self.data.get(name, None)
 
     def get_all(self) -> list[Record]:
         """Повертає всі записи з адресної книги."""
@@ -767,8 +736,8 @@ def find_contact(book: AddressBook):
     all_records = book.get_all()
     value = input("Please pass a value for search: ").strip()
 
-    for record in all_records:  # Проходим по всем записям в адресной книге
-        record_dict = record.__dict__  # Получаем атрибуты записи как словарь
+    for record in all_records:
+        record_dict = record.__dict__  # Отримуємо атрибути запису як словник
 
         for _, field_value in record_dict.items():
             if isinstance(field_value, list):
@@ -892,10 +861,10 @@ def greeting_message(commands_list):
 
 @as_table(title="List of Similar Commands")
 def predict_command(commands_list, ratio, candidate=None):
-    """Прогнозує команду на основі введення."""
+    """Прогнозує команду на основі введеного тексту в якості команди."""
 
     def similarity_ratio(s1, s2):
-        """Обчисли відсоток схожості між двома рядками."""
+        """Обчислює відсоток подібності між двома рядками."""
         return SequenceMatcher(None, s1, s2).ratio() * 100
 
     candidate_list = []
