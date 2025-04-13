@@ -287,32 +287,32 @@ class AddressBook(UserDict):
         """Повертає список усіх нотаток."""
         return self.notes
 
-    def delete_note(self, title):
-        """Видаляє нотатку за назвою."""
-        self.notes = [n for n in self.notes if n.title != title]
+    # def delete_note(self, title):
+    #     """Видаляє нотатку за назвою."""
+    #     self.notes = [n for n in self.notes if n.title != title]
 
-    def edit_note(self, title, new_text=None, new_tag=None):
-        """Редагує вміст нотатки за її назвою."""
-        for note in self.notes:
-            if note.title == title:
-                if new_text:
-                    note.note = new_text
-                if new_tag:
-                    note.tag = new_tag
-                return
-        raise Exception("Note with this title not found")
+    # def edit_note(self, title, new_text=None, new_tag=None):
+    #     """Редагує вміст нотатки за її назвою."""
+    #     for note in self.notes:
+    #         if note.title == title:
+    #             if new_text:
+    #                 note.note = new_text
+    #             if new_tag:
+    #                 note.tag = new_tag
+    #             return
+    #     raise Exception("Note with this title not found")
 
-    def search_notes(args, book):
-        """Пошук нотаток за ключовим словом у заголовку або тегу."""
-        if not args:
-            return "Keyword required to search notes"
-        keyword = args[0]
-        return [
-            n
-            for n in book.notes
-            if keyword.lower() in n.title.lower()
-            or (n.tag and keyword.lower() in n.tag.lower())
-        ]
+    # def search_notes(args, book):
+    #     """Пошук нотаток за ключовим словом у заголовку або тегу."""
+    #     if not args:
+    #         return "Keyword required to search notes"
+    #     keyword = args[0]
+    #     return [
+    #         n
+    #         for n in book.notes
+    #         if keyword.lower() in n.title.lower()
+    #         or (n.tag and keyword.lower() in n.tag.lower())
+    #     ]
 
     def add_record(self, record: Record):
         """Додає запис до адресної книги."""
@@ -717,8 +717,6 @@ def edit_note(book):
     return f"Note '{title}' updated successfully."
 
 
-
-
 @as_table(title="Found Notes")
 @input_error
 def search_note(book):
@@ -744,13 +742,11 @@ def search_note(book):
 
     return matches
 
-
-
-
 def is_valid_email(email) -> bool:
     """Валідатор для email адреси."""
     pattern = r"^[\w\.-]+@[\w\.-]+\.\w{2,}$"
     return re.match(pattern, email) is not None
+
 
 @input_error
 def add_phone(book: AddressBook):
@@ -839,13 +835,11 @@ def get_data_path(filename="addressbook.pkl") -> str:
 
 def save_data(book: AddressBook, filename="addressbook.pkl"):
     """
-    Save the AddressBook instance to a data file using pickle.
+    Зберігає екземпляр AddressBook у файл даних за допомогою pickle.
 
-    The file is saved in a hidden folder inside the user's home directory.
-
-    :param book: The AddressBook instance to be saved.
+    :param book: Екземпляр AddressBook, який потрібно зберегти.
     :type book: AddressBook
-    :param filename: The name of the file to save to.
+    :param filename: Назва файлу, у який потрібно зберегти дані.
     :type filename: str
     """
     path = get_data_path(filename)
@@ -855,13 +849,14 @@ def save_data(book: AddressBook, filename="addressbook.pkl"):
 
 def load_data(filename="addressbook.pkl") -> AddressBook:
     """
-    Load the AddressBook instance from a data file using pickle.
+    Завантажує екземпляр AddressBook з файлу даних за допомогою pickle.
 
-    If the file does not exist, a new empty AddressBook is returned.
+    Якщо файл не існує, повертається новий порожній AddressBook.
 
-    :param filename: The name of the file to load from.
+    :param filename: Назва файлу, з якого потрібно завантажити дані.
     :type filename: str
-    :return: Loaded AddressBook instance or a new one if file not found.
+    :return: Завантажений екземпляр AddressBook або новий, якщо файл
+        не знайдено.
     :rtype: AddressBook
     """
     path = get_data_path(filename)
