@@ -38,24 +38,42 @@ Run the application:
 	python main.py
 
 
-### Available Commands
+## Available Commands
 
-| Command         | Description                  |
-| --------------- | ---------------------------- |
-| `hello`         | Show greeting message        |
-| `add`           | Add a new contact            |
-| `change`        | Modify an existing contact   |
-| `add-phone`     | Add phone number to contact  |
-| `add-email`     | Add email to contact         |
-| `add-birthday`  | Add birthday to contact      |
-| `add-address`   | Add address to contact       |
-| `phone`         | Show contact's phone numbers |
-| `show-birthday` | Show contact's birthday      |
-| `birthdays`     | Show upcoming birthdays      |
-| `all`           | Display all contacts         |
-| `find`          | Search contacts              |
-| `delete`        | Remove a contact             |
-| `exit`/`close`  | Exit the application         |
+### 📇 Contact Management
+| Command         | Description                         |
+| --------------- | ----------------------------------- |
+| `add`           | Add a new contact                   |
+| `change`        | Modify an existing contact          |
+| `delete`        | Remove a contact                    |
+| `phone`         | Show contact's phone numbers        |
+| `add-phone`     | Add phone number to contact         |
+| `add-email`     | Add email to contact                |
+| `add-birthday`  | Add birthday to contact             |
+| `add-address`   | Add address to contact              |
+| `show-birthday` | Show contact's birthday             |
+| `birthdays`     | Show upcoming birthdays             |
+| `all`           | Display all contacts                |
+| `find`          | Search contacts by name/phone/email |
+
+### 📝 Notes Management
+| Command        | Description             |
+| -------------- | ----------------------- |
+| `add-note`     | Add new note            |
+| `edit-note`    | Edit an existing note   |
+| `delete-note`  | Delete specific note    |
+| `show-notes`   | Show all existing notes |
+| `search-notes` | Search notes by keyword |
+| `search-tags`  | Find notes by tag       |
+| `sort-tags`    | Sort notes by tag       |
+
+### ⚙️ Utility Commands
+| Command         | Description                    |
+| --------------- | ------------------------------ |
+| `generate-data` | Generate fake data for testing |
+| `help`          | Show full list of commands     |
+| `hello`         | Show greeting message          |
+| `exit`/`close`  | Exit the application           |
 
 ## Data Storage
 
