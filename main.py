@@ -1,16 +1,17 @@
-import os
-from collections import UserDict
-import re
-from datetime import datetime, date
-import pickle
+"""Основний модуль для логіки бота-помічника."""
 
-from colorama import init, Fore, Style
+import os
+import pickle
+import re
+from collections import UserDict
+from datetime import date, datetime
+from difflib import SequenceMatcher
+from functools import wraps
+
+from colorama import Fore, Style, init
+from rich.box import ROUNDED
 from rich.console import Console
 from rich.table import Table
-from rich.box import ROUNDED
-from functools import wraps
-from difflib import SequenceMatcher
-
 
 COLORS = ["cyan", "magenta", "green", "yellow", "blue", "bright_red", "white"]
 init(autoreset=True)
@@ -20,31 +21,34 @@ RESET_ALL = Style.RESET_ALL
 
 DATE_FORMAT = "%d.%m.%Y"
 EMAIL_VALIDATION_ERROR = (
-    "❌ Invalid email format. Please enter a valid email like 'example@domain.com'. The email should contain:\n"
+    "❌ Invalid email format. Please enter a valid email like "
+    "'example@domain.com'. The email should contain:\n"
     " - letters, digits, dots or dashes before the '@'\n"
     " - a domain name after '@' (e.g. gmail, yahoo)\n"
-    " - and a domain zone like '.com', '.net', '.org', etc. (minimum 2 characters)."
+    " - and a domain zone like '.com', '.net', '.org',"
+    " etc. (minimum 2 characters)."
 )
 BIRTHDAY_VALIDATION_ERROR = "Invalid date format. Use DD.MM.YYYY"
 
 
 def as_table(title="Table"):
+    """Декоратор для форматування виводу функції у вигляді таблиці."""
     def decorator(func):
         @wraps(func)
         def wrapper(*args, **kwargs):
             result = func(*args, **kwargs)
-            # Проверка: если это не список или пустой список — вернём как есть
+            # Провірка: якщо це не список або пустий список — повертаємо без зімн
             if not isinstance(result, list) or not result:
                 return result
 
-            # Берём первое значение для определения полей
+            # обираємо перший запис для визначення назв полів
             first = result[0]
             if hasattr(first, "__dict__"):
                 headers = list(first.__dict__.keys())
             elif isinstance(first, dict):
                 headers = list(first.keys())
             else:
-                return result  # не поддерживаемые типы
+                return result
 
             headers = [h for h in headers if h != "end-section"]
             console = Console()
@@ -89,7 +93,7 @@ def as_table(title="Table"):
                 end_section = False
 
             console.print(table)
-            return ""  # для предотвращения повторного вывода
+            return ""  # запобігання повторного виводу
 
         return wrapper
 
@@ -97,22 +101,34 @@ def as_table(title="Table"):
 
 
 class Field:
+    """Базовий клас для зберігання значення поля запису."""
+
     def __init__(self, value):
+        """Ініціалізує поле зі значенням."""
         self.value = value
 
     def __str__(self):
+        """Повертає рядкове представлення значення поля."""
         return str(self.value)
 
 
 class Name(Field):
+    """Клас для зберігання імені контакту з валідацією."""
+
     def __init__(self, name: str):
+        """Ініціалізує поле імені. Ім'я має містити щонайменше 2 символи."""
         if len(name.strip()) < 2:
-            raise Exception(ERROR + "Name should contain at least 2 characters")
+            raise Exception(
+                ERROR + "Name should contain at least 2 characters"
+            )
         super().__init__(name)
 
 
 class Phone(Field):
+    """Клас для зберігання та валідації номера телефону."""
+
     def __init__(self, value: str):
+        """Ініціалізує поле зі значенням."""
         if not re.fullmatch(r"\d{10}", value):
             raise Exception(
                 ERROR + f"Incorrect phone format {value}. Should be 10 digits."
@@ -120,46 +136,61 @@ class Phone(Field):
         super().__init__(value)
 
     def __str__(self):
+        """Повертає рядкове представлення значення."""
         return self.value
 
 
 class Birthday(Field):
+    """Клас для зберігання дати народження з валідацією формату."""
+
     def __init__(self, value):
+        """Ініціалізує дату народження. Очікується формат DD.MM.YYYY."""
         try:
             self.value = datetime.strptime(value, DATE_FORMAT).date()
         except ValueError:
             raise Exception(ERROR + BIRTHDAY_VALIDATION_ERROR)
 
     def __str__(self):
+        """Повертає дату у форматі DD.MM.YYYY або '---' якщо вона відсутня."""
         return self.value.strftime(DATE_FORMAT) if self.value else "---"
 
 
 class Email(Field):
-    def __init__(self, value):
+    """Клас для зберігання email-адреси з валідацією."""
 
+    def __init__(self, value):
+        """Ініціалізує email. Якщо формат некоректний — викликає виняток."""
         if is_valid_email(value):
             self.value = value
         else:
             raise Exception(ERROR + EMAIL_VALIDATION_ERROR)
 
     def __str__(self):
+        """Повертає email або '---', якщо він відсутній."""
         return self.value if self.value else "---"
 
 
 class Address(Field):
+    """Клас для зберігання адреси контакту."""
+
     pass
 
 
 class Note:
+    """Клас для представлення нотатки з назвою, текстом та тегом."""
 
     def __init__(self, title, text, tag=None):
+        """Ініціалізація нотатки."""
         self.title = title
         self.note = text
         self.tag = tag
 
 
 class Record:
+    """Клас для представлення запису в адресній книзі."""
+
     def __init__(self, name: str):
+        """Ініціалізація нового запису."""
         self.name = Name(name)
         self.phones: list[Phone] = []
         self.birthday: Birthday = None
@@ -167,124 +198,114 @@ class Record:
         self.address: Address = None
 
     def change_name(self, book, new_name):
+        """Змінює ім’я контакту в книзі."""
         old_name = self.name.value
         self.name = Name(new_name)
         book.update_record_name(old_name, self)
         return "Contact updated."
 
     def add_phone(self, phone):
-        """Додавання телефонів"""
+        """Додавання телефонів."""
         self.phones.append(Phone(phone))
         return "Contact updated."
 
     def remove_phone(self, phone):
-        """Видалення телефонів"""
+        """Видалення телефонів."""
         self.phones = [p for p in self.phones if p.value != phone]
 
     def edit_phone(self, old_phone, new_phone):
-        """Редагування телефонів"""
+        """Редагування телефонів."""
         for phone in self.phones:
             if phone.value == old_phone:
                 phone.value = Phone(new_phone).value
                 return "Contact updated."
         raise Exception(
-            ERROR + f'You want to change: {old_phone}\nError: "Phone number not found."'
+            ERROR + f'You want to change: {old_phone}\n' +
+                    'Error: "Phone number not found."'
         )
 
     def find_phone(self, search_phone):
-        """Пошук телефону"""
+        """Пошук телефону."""
         for phone in self.phones:
             if phone.value == search_phone:
                 return phone
         return None
 
     def add_birthday(self, birthday):
-        """Додавання дня народження"""
+        """Додавання дня народження."""
         self.birthday = Birthday(birthday)
         return "Contact updated."
 
     def add_address(self, address: str):
-        """Додавання адреси"""
+        """Додавання адреси."""
         if len(address.strip()) < 2:
-            raise Exception(ERROR + "Address should contain at least 2 characters")
+            raise Exception(
+                ERROR + "Address should contain at least 2 characters"
+            )
 
         self.address = Address(address)
         return "Address added."
 
     def add_email(self, email):
-        """Додавання email адреси"""
-
+        """Додавання email адреси."""
         self.email = Email(email)
         return "Email added."
 
     def __str__(self):
+        """Повертає текстове представлення запису."""
         title_name = FIELD + "Contact name:" + RESET_ALL
         title_phones = FIELD + "phones:" + RESET_ALL
         title_birthday = FIELD + "birthday:" + RESET_ALL
         title_email = FIELD + "email:" + RESET_ALL
         title_address = FIELD + "address:" + RESET_ALL
-        return f"{title_name} {self.name.value}, {title_phones} {'; '.join(p.value for p in self.phones)}, {title_birthday} {self.birthday if self.birthday else '---'}, {title_email} {self.email if self.email else '---'}, {title_address} {self.address if self.address else '---'}"
+        return (
+            f"{title_name} {self.name.value}, " +
+            f"{title_phones} {'; '.join(p.value for p in self.phones)}, " +
+            f"{title_birthday} {self.birthday if self.birthday else '---'}, " +
+            f"{title_email} {self.email if self.email else '---'}, " +
+            f"{title_address} {self.address if self.address else '---'}"
+        )
 
 
 class AddressBook(UserDict):
+    """Клас для зберігання контактів та нотаток. Наслідує UserDict."""
+
     def __init__(self):
+        """Ініціалізація адресної книги."""
         super().__init__()
         self.notes = []
 
     def find(self, name):
+        """Пошук контакту за ім’ям."""
         return self.data.get(name)
 
     def add_note(self, note):
+        """Додає нотатку до книги."""
         self.notes.append(note)
 
     def get_notes(self):
+        """Повертає список усіх нотаток."""
         return self.notes
 
-    def delete_note(self, title):
-        self.notes = [n for n in self.notes if n.title != title]
-
-    def edit_note(self, title, new_text=None, new_tag=None):
-        for note in self.notes:
-            if note.title == title:
-                if new_text:
-                    note.note = new_text
-                if new_tag:
-                    note.tag = new_tag
-                return
-        raise Exception("Note with this title not found")
-
-    def search_notes(args, book):
-        if not args:
-            return "Keyword required to search notes"
-        keyword = args[0]
-        return [
-            n
-            for n in book.notes
-            if keyword.lower() in n.title.lower()
-            or (n.tag and keyword.lower() in n.tag.lower())
-        ]
-
     def add_record(self, record: Record):
-        """Додавання записів"""
+        """Додає запис до адресної книги."""
         self.data[record.name.value] = record
 
     def update_record_name(self, old_name: str, record: Record):
+        """Оновлює ім’я існуючого запису, зберігаючи його дані."""
         self.delete(old_name)
         self.add_record(record)
 
     def add_notes(self, note):
-        """Додавання записів"""
+        """Додає нотатку як запис."""
         self.data[note.tite] = note
 
-    def find(self, name) -> Record:
-        """Пошук записів за іменем"""
-        return self.data.get(name, None)
-
     def get_all(self) -> list[Record]:
+        """Повертає всі записи з адресної книги."""
         return list(self.data.values())
 
     def delete(self, name):
-        """Видалення записів за іменем"""
+        """Видалення записів за іменем."""
         if name in self.data:
             del self.data[name]
             return "Contact deleted"
@@ -292,14 +313,19 @@ class AddressBook(UserDict):
             raise Exception(ERROR + f"Contact with name {name} not found.")
 
     def get_upcoming_birthdays(self, days_count):
+        """Повертає список привітань на найближчі дні."""
         result = []
         today = datetime.today().date()
         for record in self.data.values():
             if record.birthday:
                 name = record.name.value
                 birthday = record.birthday.value
-                birthday_this_year = date(today.year, birthday.month, birthday.day)
-                birthday_next_year = date(today.year + 1, birthday.month, birthday.day)
+                birthday_this_year = date(
+                    today.year, birthday.month, birthday.day
+                )
+                birthday_next_year = date(
+                    today.year + 1, birthday.month, birthday.day
+                )
                 delta = (birthday_this_year - today).days
                 delta_next = (birthday_next_year - today).days
                 if 0 <= delta <= days_count:
@@ -323,6 +349,7 @@ class AddressBook(UserDict):
         return result
 
     def __str__(self):
+        """Повертає текстове представлення всіх записів книги."""
         return "\n".join(str(record) for record in self.data.values())
 
 
@@ -351,6 +378,7 @@ def input_error(func):
 
 @input_error
 def add_contact(book: AddressBook):
+    """Додає новий контакт до адресної книги."""
     name = input("Please type a name: ").strip()
     while len(name) < 2:
         name = input(
@@ -364,7 +392,8 @@ def add_contact(book: AddressBook):
     if record is None:
         record = Record(name)
         phones = input(
-            "Input phones in format: <ph1> <ph2> ... (each phone 10 digits length): "
+            "Input phones in format: " +
+            "<ph1> <ph2> ... (each phone 10 digits length): "
         )
         for phone in phones.split():
             try:
@@ -387,7 +416,10 @@ def add_contact(book: AddressBook):
                 record.add_birthday(birthday.strip())
             except Exception:
                 print(ERROR + BIRTHDAY_VALIDATION_ERROR)
-                print("You can add birthday later using the command 'add-birthday'")
+                print(
+                    "You can add birthday later " +
+                    "using the command 'add-birthday'"
+                )
         address = input("Add address or leave blanc: ")
         if len(address.strip()):
             record.add_address(address)
@@ -405,7 +437,10 @@ def change_contact(book: AddressBook):
     record = book.find(name)
     if record:
         record_keys = list(record.__dict__.keys())
-        input_message = f"Please pass one of the following fields that you want to change or pass 'exit': {record_keys}: "
+        input_message = (
+            "Please pass one of the following fields that you " +
+            f"want to change or pass 'exit': {record_keys}: "
+        )
         key = input(input_message).strip()
         while key not in record_keys:
             key = input(input_message).strip()
@@ -414,7 +449,8 @@ def change_contact(book: AddressBook):
 
         commands = {
             "phones": {
-                "prompt": "Please pass old and new phones in format <ph1> <ph2>: ",
+                "prompt": "Please pass old and " +
+                          "new phones in format <ph1> <ph2>: ",
                 "action": lambda data: record.edit_phone(*data.split()),
             },
             "name": {
@@ -445,7 +481,6 @@ def change_contact(book: AddressBook):
 @input_error
 def show_phone(book: AddressBook):
     """Показує телефон контакту."""
-
     name = input("Please type a name: ")
     record = book.find(name)
     if record:
@@ -459,12 +494,12 @@ def show_phone(book: AddressBook):
 @input_error
 def add_birthday(book: AddressBook):
     """Додає день народження до контакту."""
-
     name = input("Please type a name: ")
     record = book.find(name)
     if record:
         birthday = input(
-            "Please type a birthday in format DD.MM.YYYY (example 01.01.2000): "
+            "Please type a birthday in format DD.MM.YYYY " +
+            "(example 01.01.2000): "
         )
         return record.add_birthday(birthday)
     raise Exception(ERROR + f"Contact with name {name} not found.")
@@ -474,7 +509,6 @@ def add_birthday(book: AddressBook):
 @input_error
 def show_birthday(book):
     """Повертає дату дня народження контакту."""
-
     name = input("Please type a name: ").strip()
     record = book.find(name)
 
@@ -491,7 +525,8 @@ def show_birthday(book):
 def birthdays(book: AddressBook):
     """Повертає список контактів із днями народження на наступний тиждень."""
     days_count = input(
-        "Please enter the number of days within which you want to find upcoming birthdays: "
+        "Please enter the number of days " +
+        "within which you want to find upcoming birthdays: "
     )
     try:
         days_count = int(days_count)
@@ -508,7 +543,6 @@ def birthdays(book: AddressBook):
 @as_table(title="Address Book")
 def show_all(book):
     """Повертає всі контакти у книзі у вигляді таблиці."""
-
     if not book:
         return "No contacts saved."
     else:
@@ -518,7 +552,6 @@ def show_all(book):
 @input_error
 def add_address(book: AddressBook):
     """Додає адресу до контакту."""
-
     name = input("Please type a name: ")
     record = book.find(name)
     if record:
@@ -531,7 +564,6 @@ def add_address(book: AddressBook):
 @input_error
 def add_email(book: AddressBook):
     """Додає email до контакту."""
-
     name = input("Please type a name: ")
     record = book.find(name)
 
@@ -544,11 +576,13 @@ def add_email(book: AddressBook):
 
 @as_table("Notes")
 def show_notes(book):
+    """Показує всі нотатки користувача."""
     return book.get_notes()
 
 
 @input_error
 def add_note(book):
+    """Додає нову нотатку."""
     title = input("Please type a title for the note: ").strip()
     while len(title) < 1:
         title = input(
@@ -560,7 +594,8 @@ def add_note(book):
     text = input("Please type the content of the note: ").strip()
     while len(text) < 1:
         text = input(
-            "Note cannot be empty. Please enter text or type 'exit' to cancel: "
+            "Note cannot be empty. " +
+            "Please enter text or type 'exit' to cancel: "
         ).strip()
         if text.lower() == "exit":
             return
@@ -579,11 +614,14 @@ def add_note(book):
 
 @input_error
 def delete_note(book):
+    """Видаляє нотатку за назвою або тегом."""
     method = input("Delete by 'title' or by 'tag'? ").strip().lower()
 
     if method == "title":
         title = input("Please type the title of the note to delete: ").strip()
-        deleted = [note for note in book.notes if note.title.lower() == title.lower()]
+        deleted = [
+            note for note in book.notes if note.title.lower() == title.lower()
+        ]
         if not deleted:
             raise Exception(f"No notes found with title '{title}'")
         for note in deleted:
@@ -591,8 +629,12 @@ def delete_note(book):
         return f"Deleted {len(deleted)} note(s) with title '{title}'"
 
     elif method == "tag":
-        tag = input("Please type the tag of the notes to delete (include #): ").strip()
-        deleted = [note for note in book.notes if note.tag and note.tag.lower() == tag.lower()]
+        tag = input(
+            "Please type the tag of the notes to delete (include #): ").strip()
+        deleted = [
+            note for note in book.notes if note.tag and
+                                           note.tag.lower() == tag.lower()
+        ]
         if not deleted:
             raise Exception(f"No notes found with tag '{tag}'")
         for note in deleted:
@@ -605,16 +647,20 @@ def delete_note(book):
 
 @input_error
 def edit_note(book):
-    """Редактирует существующую заметку по названию (title)."""
-
+    """Редагує існуючу нотатку за назвою (title)."""
     title = input("Please type the title of the note to edit: ").strip()
-    note = next((n for n in book.notes if n.title.lower() == title.lower()), None)
+    note = next(
+        (n for n in book.notes if n.title.lower() == title.lower()), None
+    )
 
     if not note:
         raise Exception(ERROR + f"Note with title '{title}' not found.")
 
     note_fields = ["note", "tag"]
-    input_message = f"Which field would you like to change? Choose from {note_fields} or type 'exit': "
+    input_message = (
+            "Which field would you like to change? " +
+            f"Choose from {note_fields} or type 'exit': "
+    )
     key = input(input_message).strip()
     while key not in note_fields:
         if key == "exit":
@@ -627,8 +673,11 @@ def edit_note(book):
             "action": lambda data: setattr(note, "note", data),
         },
         "tag": {
-            "prompt": "Enter new tag (start with #) or leave blank to remove tag: ",
-            "action": lambda data: setattr(note, "tag", data if data.startswith("#") else None),
+            "prompt": "Enter new tag (start with #) or " +
+                      "leave blank to remove tag: ",
+            "action": lambda data: setattr(
+                note, "tag", data if data.startswith("#") else None
+            ),
         },
     }
 
@@ -637,11 +686,10 @@ def edit_note(book):
     return f"Note '{title}' updated successfully."
 
 
-
-
 @as_table(title="Found Notes")
 @input_error
 def search_note(book):
+    """Шукає нотатку за ключовим словом."""
     keyword = input("Please enter a keyword to search notes: ").strip().lower()
 
     if not keyword:
@@ -663,16 +711,15 @@ def search_note(book):
 
     return matches
 
-
-
-
 def is_valid_email(email) -> bool:
     """Валідатор для email адреси."""
     pattern = r"^[\w\.-]+@[\w\.-]+\.\w{2,}$"
     return re.match(pattern, email) is not None
 
+
 @input_error
 def add_phone(book: AddressBook):
+    """Додає номер телефону до існуючого контакту."""
     name = input("Please type a name: ")
     record: Record = book.find(name)
 
@@ -685,11 +732,12 @@ def add_phone(book: AddressBook):
 
 @as_table(title="Search Result")
 def find_contact(book: AddressBook):
+    """Шукає контакт за значенням одного з полів."""
     all_records = book.get_all()
     value = input("Please pass a value for search: ").strip()
 
-    for record in all_records:  # Проходим по всем записям в адресной книге
-        record_dict = record.__dict__  # Получаем атрибуты записи как словарь
+    for record in all_records:
+        record_dict = record.__dict__  # Отримуємо атрибути запису як словник
 
         for _, field_value in record_dict.items():
             if isinstance(field_value, list):
@@ -704,18 +752,22 @@ def find_contact(book: AddressBook):
 
 @input_error
 def delete_contact(book: AddressBook):
+    """Видаляє контакт за ім’ям."""
     name = input("Please type a name: ").strip()
     return book.delete(name)
 
 
 @as_table(title="Search Tags Result")
 def search_tags(book: AddressBook):
+    """Шукає нотатки за тегом."""
     value = input("Please pass a value for tag search: ").strip()
 
     result = []
     for note in book.notes:
         if note.tag and note.tag.lower() == value.lower():
-            result.append({"Title": note.title, "Note": note.note, "Tag": note.tag})
+            result.append(
+                {"Title": note.title, "Note": note.note, "Tag": note.tag}
+            )
     if result:
         return result
     return "Tag not found."
@@ -723,6 +775,7 @@ def search_tags(book: AddressBook):
 
 @as_table(title="Sort Notes by Tags Result")
 def sort_tags(book: AddressBook):
+    """Сортує нотатки за тегами."""
     return (
         sorted(book.notes, key=lambda x: (x.tag is None, x.tag or ""))
         if book.notes
@@ -751,13 +804,11 @@ def get_data_path(filename="addressbook.pkl") -> str:
 
 def save_data(book: AddressBook, filename="addressbook.pkl"):
     """
-    Save the AddressBook instance to a data file using pickle.
+    Зберігає екземпляр AddressBook у файл даних за допомогою pickle.
 
-    The file is saved in a hidden folder inside the user's home directory.
-
-    :param book: The AddressBook instance to be saved.
+    :param book: Екземпляр AddressBook, який потрібно зберегти.
     :type book: AddressBook
-    :param filename: The name of the file to save to.
+    :param filename: Назва файлу, у який потрібно зберегти дані.
     :type filename: str
     """
     path = get_data_path(filename)
@@ -767,16 +818,16 @@ def save_data(book: AddressBook, filename="addressbook.pkl"):
 
 def load_data(filename="addressbook.pkl") -> AddressBook:
     """
-    Load the AddressBook instance from a data file using pickle.
+    Завантажує екземпляр AddressBook з файлу даних за допомогою pickle.
 
-    If the file does not exist, a new empty AddressBook is returned.
+    Якщо файл не існує, повертається новий порожній AddressBook.
 
-    :param filename: The name of the file to load from.
+    :param filename: Назва файлу, з якого потрібно завантажити дані.
     :type filename: str
-    :return: Loaded AddressBook instance or a new one if file not found.
+    :return: Завантажений екземпляр AddressBook або новий, якщо файл
+        не знайдено.
     :rtype: AddressBook
     """
-
     path = get_data_path(filename)
 
     if not os.path.exists(path):
@@ -790,13 +841,14 @@ def load_data(filename="addressbook.pkl") -> AddressBook:
     except Exception as e:
         print(
             f"Error {e} has occurred.\n"
-            + f"We have handled this situation and you may proceed ☺️."
+            + "We have handled this situation and you may proceed ☺️."
         )
         return AddressBook()
 
 
 @as_table(title="Command list")
 def greeting_message(commands_list):
+    """Повертає список доступних команд."""
     return [
         {
             "command": command,
@@ -809,10 +861,10 @@ def greeting_message(commands_list):
 
 @as_table(title="List of Similar Commands")
 def predict_command(commands_list, ratio, candidate=None):
-    """Predicts the command based on the input."""
+    """Прогнозує команду на основі введеного тексту в якості команди."""
 
     def similarity_ratio(s1, s2):
-        """returns the percentage similarity between two strings"""
+        """Обчислює відсоток подібності між двома рядками."""
         return SequenceMatcher(None, s1, s2).ratio() * 100
 
     candidate_list = []
@@ -829,6 +881,7 @@ def predict_command(commands_list, ratio, candidate=None):
 
 
 def main():
+    """Запускає основну логіку застосунку."""
     commands_list = {
         "add": {
             "description": "Add new contact",
@@ -867,7 +920,8 @@ def main():
             "handler": lambda book: show_birthday(book),
         },
         "birthdays": {
-            "description": "Show upcoming birthdays for a given period of time",
+            "description": "Show upcoming birthdays for " +
+                           "a given period of time",
             "handler": lambda book: birthdays(book),
         },
         "find": {
