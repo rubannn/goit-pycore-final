@@ -426,8 +426,8 @@ class TestFunctions(unittest.TestCase):
         self.assertEqual(result, "Contact deleted")
 
     def test_find_contact_found(self):
-        """Test that searching for an existing phone returns contact info."""
-        with patch("builtins.input", return_value=VALID_USER["phone"]):
+        """Test that searching for an existing name returns contact info."""
+        with patch("builtins.input", return_value=VALID_USER["name"]):
             result = find_contact(self.book)
         self.assertEqual(result, "")
 
