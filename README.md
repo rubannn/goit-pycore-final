@@ -1,5 +1,5 @@
 
-# Address Book Assistant
+# Address Book Assistant (final project)
 
 A command-line address book application for managing contacts with phone numbers, emails, birthdays, and addresses.
 
